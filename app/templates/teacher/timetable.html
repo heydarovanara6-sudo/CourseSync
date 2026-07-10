@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Timetable — CourseSync{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Teacher</p>
+  <h1 class="font-display text-3xl">My timetable</h1>
+</div>
+
+<div class="space-y-6 mb-8">
+  {% for day_index, entries in by_day.items() %}
+    <section>
+      <h2 class="font-display text-lg mb-2">{{ day_names[day_index] }}</h2>
+      {% if entries %}
+        <div class="card divide-y divide-paper-line">
+          {% for entry in entries %}
+            <div class="px-4 py-3 flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-medium">{{ entry.label() }}</p>
+                <p class="font-mono text-xs text-moss-500">{{ entry.start_time.strftime('%H:%M') }}&ndash;{{ entry.end_time.strftime('%H:%M') }}</p>
+              </div>
+              <form method="POST" action="{{ url_for('teacher.delete_timetable_entry', entry_id=entry.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-ghost !text-xs !py-1">Remove</button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-moss-500">Nothing scheduled.</p>
+      {% endif %}
+    </section>
+  {% endfor %}
+</div>
+
+<details class="card p-4">
+  <summary class="text-sm font-semibold cursor-pointer select-none">+ Add a timetable slot</summary>
+  <form method="POST" action="{{ url_for('teacher.add_timetable_entry') }}" class="mt-4 space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    <div class="grid grid-cols-3 gap-3">
+      <select name="day_of_week" class="input" required>
+        {% for i in range(7) %}
+          <option value="{{ i }}">{{ ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][i] }}</option>
+        {% endfor %}
+      </select>
+      <input class="input" type="time" name="start_time" required />
+      <input class="input" type="time" name="end_time" required />
+    </div>
+
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">For</p>
+      <select name="target_type" id="target_type" class="input" onchange="
+        document.getElementById('student_picker').classList.toggle('hidden', this.value !== 'student');
+        document.getElementById('group_picker').classList.toggle('hidden', this.value !== 'group');
+        document.getElementById('title_picker').classList.toggle('hidden', this.value !== 'custom');
+      ">
+        <option value="student">A student</option>
+        <option value="group">A group</option>
+        <option value="custom">Something else</option>
+      </select>
+    </div>
+
+    <div id="student_picker">
+      <select name="student_id" class="input">
+        {% for student in students %}
+          <option value="{{ student.id }}">{{ student.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div id="group_picker" class="hidden">
+      <select name="group_id" class="input">
+        {% for group in groups %}
+          <option value="{{ group.id }}">{{ group.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div id="title_picker" class="hidden">
+      <input class="input" type="text" name="title" placeholder="Label (e.g. Prep time)" />
+    </div>
+
+    <button type="submit" class="btn btn-dark w-full">Add to timetable</button>
+  </form>
+</details>
+{% endblock %}

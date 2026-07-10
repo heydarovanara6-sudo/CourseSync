@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Environment
+.env
+
+# Database (local SQLite file — never ship real user data)
+instance/*.db
+instance/*.sqlite3
+
+# Editors / OS
+.vscode/
+.DS_Store

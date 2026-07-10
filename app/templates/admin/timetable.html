@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Timetable — CourseSync{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Admin</p>
+  <h1 class="font-display text-3xl">Everyone's timetable</h1>
+  <p class="text-sm text-moss-500 mt-1">Read-only — each teacher manages their own from their Timetable page.</p>
+</div>
+
+<div class="space-y-8">
+  {% for teacher, entries in by_teacher.items() %}
+    <section>
+      <h2 class="font-display text-xl mb-3">{{ teacher.name }}</h2>
+      <div class="card divide-y divide-paper-line">
+        {% for entry in entries %}
+          <div class="px-4 py-3 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-medium">{{ entry.label() }}</p>
+              <p class="text-xs text-moss-500">{{ entry.day_name() }}</p>
+            </div>
+            <span class="font-mono text-xs text-moss-500">{{ entry.start_time.strftime('%H:%M') }}&ndash;{{ entry.end_time.strftime('%H:%M') }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    <div class="card p-8 text-center text-moss-500 text-sm">No timetable entries yet.</div>
+  {% endfor %}
+</div>
+{% endblock %}

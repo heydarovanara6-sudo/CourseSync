@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CourseSync{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: { 900: '#14261f', 800: '#1b332a', 700: '#22443a', 600: '#325748' },
+            moss: { 500: '#5b6e5a', 300: '#97a68f' },
+            paper: { DEFAULT: '#f1f4ea', card: '#fbfcf7', line: '#dde3d4' },
+            brass: { 300: '#e8cf9c', 500: '#c4934a', 600: '#a97934', ink: '#4a3416' },
+            brick: { 500: '#9c3b32', 100: '#f3e0dd' },
+          },
+          fontFamily: {
+            display: ['Fraunces', 'ui-serif', 'serif'],
+            sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body class="h-full">
+
+{% if current_user.is_authenticated %}
+<div class="flex min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-64 shrink-0 bg-ink-900 text-paper flex flex-col justify-between">
+    <div>
+      <div class="px-6 py-6 flex items-center gap-2 border-b border-white/10">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="10" r="7.5" stroke="#c4934a" stroke-width="1.6"/>
+          <circle cx="17" cy="17" r="7.5" stroke="#f1f4ea" stroke-width="1.6" fill="#14261f"/>
+        </svg>
+        <span class="font-display text-xl tracking-tight">CourseSync</span>
+      </div>
+
+      <nav class="px-3 py-5 space-y-1">
+        {% if current_user.is_superadmin() %}
+          <a href="{{ url_for('superadmin.dashboard') }}" class="sidebar-link {{ 'is-active' if request.endpoint == 'superadmin.dashboard' }}">
+            <span>&#9670;</span> Courses
+          </a>
+        {% endif %}
+
+        {% if current_user.is_admin() %}
+          <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link {{ 'is-active' if request.endpoint == 'admin.dashboard' }}">
+            <span>&#9670;</span> Overview
+          </a>
+        {% endif %}
+
+        {% if current_user.is_admin() or current_user.is_teacher() %}
+          <a href="{{ url_for('teacher.dashboard') }}" class="sidebar-link {{ 'is-active' if request.endpoint in ['teacher.dashboard', 'teacher.student_detail'] }}">
+            <span>&#9670;</span> My students
+          </a>
+          <a href="{{ url_for('teacher.groups') }}" class="sidebar-link {{ 'is-active' if request.endpoint in ['teacher.groups', 'teacher.group_detail'] }}">
+            <span>&#9678;</span> Groups
+          </a>
+          <a href="{{ url_for('teacher.homework_list') }}" class="sidebar-link {{ 'is-active' if request.endpoint in ['teacher.homework_list', 'teacher.homework_detail'] }}">
+            <span>&#9636;</span> Homework
+          </a>
+          <a href="{{ url_for('teacher.timetable') }}" class="sidebar-link {{ 'is-active' if request.endpoint == 'teacher.timetable' }}">
+            <span>&#128337;</span> Timetable
+          </a>
+        {% endif %}
+
+        {% if current_user.is_student() %}
+          <a href="{{ url_for('student.dashboard') }}" class="sidebar-link {{ 'is-active' if request.endpoint in ['student.dashboard', 'student.homework_detail'] }}">
+            <span>&#9670;</span> My progress
+          </a>
+          <a href="{{ url_for('student.timetable') }}" class="sidebar-link {{ 'is-active' if request.endpoint == 'student.timetable' }}">
+            <span>&#128337;</span> Timetable
+          </a>
+        {% endif %}
+      </nav>
+    </div>
+
+    <div class="px-4 py-5 border-t border-white/10">
+      <p class="text-sm text-white/90 font-medium truncate">{{ current_user.name }}</p>
+      <p class="text-xs text-moss-300 truncate mb-3">
+        {{ 'Superadmin' if current_user.is_superadmin() else ('Admin' if current_user.is_admin() else ('Teacher' if current_user.is_teacher() else 'Student')) }}
+      </p>
+      <a href="{{ url_for('auth.logout') }}" class="sidebar-link !px-0 !py-1 text-xs">&larr; Log out</a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="flex-1 flex flex-col min-w-0">
+    <main class="flex-1 p-8 max-w-5xl w-full mx-auto">
+      {% from "_macros.html" import flashes %}
+      {{ flashes() }}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+{% else %}
+  {% block bare_content %}{% endblock %}
+{% endif %}
+
+</body>
+</html>

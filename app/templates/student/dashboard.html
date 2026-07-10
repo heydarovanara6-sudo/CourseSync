@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stamp_card %}
+{% block title %}My progress — CourseSync{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Student</p>
+  <h1 class="font-display text-3xl">Welcome back, {{ student.name.split(' ')[0] }}</h1>
+</div>
+
+<!-- Cycles, grouped by teacher -->
+<section class="mb-10">
+  <h2 class="font-display text-xl mb-3">My lessons</h2>
+  <div class="space-y-4">
+    {% for teacher in student.teachers %}
+      {% set cycle = student.active_cycle_for(teacher.id) %}
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm font-medium">{{ teacher.name }}</span>
+          {% if cycle %}
+            <span class="badge {{ 'badge-brass' if cycle.is_ready_to_complete() else 'badge-moss' }} font-mono">
+              {{ cycle.lessons_completed }} / {{ cycle.total_lessons }}
+            </span>
+          {% else %}
+            <span class="badge badge-moss">No active cycle</span>
+          {% endif %}
+        </div>
+        {% if cycle %}{{ stamp_card(cycle, size='sm') }}{% endif %}
+
+        {% set past = student.past_cycles_for(teacher.id) %}
+        {% if past %}
+          <div class="mt-4 pt-4 border-t border-paper-line space-y-3">
+            {% for c in past %}
+              {% if c.feedback %}
+                <p class="text-sm text-ink-700 leading-relaxed">
+                  <span class="text-xs uppercase tracking-wide text-moss-500 block mb-1">Feedback &middot; {{ c.total_lessons }}-lesson cycle</span>
+                  {{ c.feedback.content }}
+                </p>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="card p-8 text-center text-moss-500 text-sm">No teachers assigned yet.</div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Homework -->
+<section>
+  <h2 class="font-display text-xl mb-3">Homework</h2>
+  <div class="space-y-2">
+    {% for hw in homework %}
+      {% set status = hw.status() %}
+      <a href="{{ url_for('student.homework_detail', homework_id=hw.id) }}" class="card p-4 flex items-center justify-between hover:border-brass-500 transition-colors block">
+        <div>
+          <p class="text-sm font-medium">{{ hw.title }}</p>
+          <p class="text-xs text-moss-500">from {{ hw.teacher.name }}{% if hw.due_date %} &middot; due {{ hw.due_date.strftime('%b %d, %Y') }}{% endif %}</p>
+        </div>
+        <span class="badge {{ 'badge-brass' if status == 'graded' else ('badge-moss' if status == 'submitted' else 'badge-brick') }}">
+          {{ status.replace('_', ' ') }}
+        </span>
+      </a>
+    {% else %}
+      <div class="card p-8 text-center text-moss-500 text-sm">Nothing assigned yet — check back soon.</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Overview — CourseSync{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Admin</p>
+  <h1 class="font-display text-3xl">Overview</h1>
+</div>
+
+<!-- Stat cards -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+  <div class="card p-5">
+    <p class="font-mono text-3xl">{{ teachers|length }}</p>
+    <p class="text-sm text-moss-500 mt-1">Teachers</p>
+  </div>
+  <div class="card p-5">
+    <p class="font-mono text-3xl">{{ students|length }}</p>
+    <p class="text-sm text-moss-500 mt-1">Students</p>
+  </div>
+  <div class="card p-5">
+    <p class="font-mono text-3xl">{{ active_cycles }}</p>
+    <p class="text-sm text-moss-500 mt-1">Active cycles</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+  <!-- Teachers -->
+  <section>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-display text-xl">Teachers</h2>
+    </div>
+    <p class="text-xs text-moss-500 mb-3">Admins can teach too — they show up here alongside teachers and can be assigned to students.</p>
+
+    <div class="card divide-y divide-paper-line mb-4">
+      {% for teacher in teachers %}
+        <a href="{{ url_for('admin.teacher_detail', teacher_id=teacher.id) }}"
+           class="px-4 py-3 flex items-center justify-between hover:bg-black/[0.02] transition-colors block">
+          <div>
+            <p class="text-sm font-medium">{{ teacher.name }} {% if teacher.is_admin() %}<span class="badge badge-brass ml-1">Admin</span>{% endif %}</p>
+            <p class="text-xs text-moss-500">{{ teacher.email }}</p>
+          </div>
+          <span class="badge badge-moss shrink-0">{{ teacher.students|length }} student{{ '' if teacher.students|length == 1 else 's' }}</span>
+        </a>
+      {% else %}
+        <p class="px-4 py-6 text-sm text-moss-500">No teachers yet — add one below.</p>
+      {% endfor %}
+    </div>
+
+    <details class="card p-4">
+      <summary class="text-sm font-semibold cursor-pointer select-none">+ Add a teacher</summary>
+      <form method="POST" action="{{ url_for('admin.add_teacher') }}" class="mt-4 space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input class="input" type="text" name="name" placeholder="Full name" required />
+        <input class="input" type="email" name="email" placeholder="Email" required />
+        <input class="input" type="password" name="password" placeholder="Temporary password" required />
+        <button type="submit" class="btn btn-dark w-full">Create teacher account</button>
+      </form>
+    </details>
+  </section>
+
+  <!-- Students -->
+  <section>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-display text-xl">Students</h2>
+    </div>
+
+    <div class="card divide-y divide-paper-line mb-4">
+      {% for student in students %}
+        <div class="px-4 py-3">
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <a href="{{ url_for('admin.student_detail', student_id=student.id) }}" class="min-w-0 hover:underline">
+              <p class="text-sm font-medium truncate">{{ student.name }}</p>
+              <p class="text-xs text-moss-500 truncate">{{ student.teacher_names() }}</p>
+            </a>
+          </div>
+
+          <details class="text-xs">
+            <summary class="cursor-pointer select-none text-moss-500">Edit teachers</summary>
+            <form method="POST" action="{{ url_for('admin.assign_student', student_id=student.id) }}" class="mt-2 space-y-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <div class="flex flex-wrap gap-x-3 gap-y-1">
+                {% for teacher in teachers %}
+                  <label class="flex items-center gap-1.5">
+                    <input type="checkbox" name="teacher_ids" value="{{ teacher.id }}"
+                           class="accent-brass-500"
+                           {{ 'checked' if teacher in student.teachers }} />
+                    {{ teacher.name }}{{ ' (admin)' if teacher.is_admin() else '' }}
+                  </label>
+                {% endfor %}
+              </div>
+              <button type="submit" class="btn btn-ghost !text-xs !py-1">Save</button>
+            </form>
+          </details>
+        </div>
+      {% else %}
+        <p class="px-4 py-6 text-sm text-moss-500">No students yet — add one below.</p>
+      {% endfor %}
+    </div>
+
+    <details class="card p-4">
+      <summary class="text-sm font-semibold cursor-pointer select-none">+ Add a student</summary>
+      <form method="POST" action="{{ url_for('admin.add_student') }}" class="mt-4 space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input class="input" type="text" name="name" placeholder="Full name" required />
+        <input class="input" type="email" name="email" placeholder="Email (optional)" />
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Assign to teacher(s)</p>
+          <div class="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+            {% for teacher in teachers %}
+              <label class="flex items-center gap-1.5">
+                <input type="checkbox" name="teacher_ids" value="{{ teacher.id }}" class="accent-brass-500" />
+                {{ teacher.name }}{{ ' (admin)' if teacher.is_admin() else '' }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-dark w-full" {{ 'disabled' if not teachers }}>Add student</button>
+      </form>
+      {% if not teachers %}
+        <p class="text-xs text-moss-500 mt-2">Add a teacher first.</p>
+      {% endif %}
+    </details>
+  </section>
+
+</div>
+{% endblock %}

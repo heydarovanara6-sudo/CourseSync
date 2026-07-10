@@ -1,0 +1,242 @@
+/* =========================================================================
+   CourseSync — design tokens & signature components
+   Palette:  ink (chalkboard green) / paper (sage-ivory) / brass (accent)
+   Type:     Fraunces (display) · IBM Plex Sans (body) · IBM Plex Mono (data)
+   ========================================================================= */
+
+:root {
+  --ink-900: #14261f;
+  --ink-800: #1b332a;
+  --ink-700: #22443a;
+  --ink-600: #325748;
+  --moss-500: #5b6e5a;
+  --moss-300: #97a68f;
+
+  --paper: #f1f4ea;
+  --paper-card: #fbfcf7;
+  --paper-line: #dde3d4;
+
+  --brass-300: #e8cf9c;
+  --brass-500: #c4934a;
+  --brass-600: #a97934;
+  --brass-ink: #4a3416;
+
+  --brick-500: #9c3b32;
+  --brick-100: #f3e0dd;
+
+  --shadow-card: 0 1px 2px rgba(20, 38, 31, 0.06), 0 8px 24px -12px rgba(20, 38, 31, 0.18);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--paper);
+  color: var(--ink-900);
+}
+
+.font-display {
+  font-family: "Fraunces", ui-serif, Georgia, serif;
+  font-optical-sizing: auto;
+}
+
+.font-mono {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible focus ring everywhere, respecting keyboard-only navigation */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--brass-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Ledger-rule texture — a quiet ambient backdrop for the login hero panel
+   ------------------------------------------------------------------------- */
+.ledger-texture {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(241, 244, 234, 0.05) 0,
+    rgba(241, 244, 234, 0.05) 1px,
+    transparent 1px,
+    transparent 38px
+  );
+}
+
+/* -------------------------------------------------------------------------
+   Signature element: the Stamp Card
+   A row of circular "stamps" tracking progress through a lesson cycle.
+   Filled = completed lesson (brass, embossed). Empty = still to come.
+   ------------------------------------------------------------------------- */
+.stamp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stamp {
+  --size: 2.25rem;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stamp--empty {
+  background: transparent;
+  border: 1.5px dashed var(--paper-line);
+  color: var(--moss-300);
+}
+
+.stamp--filled {
+  background: radial-gradient(circle at 32% 28%, var(--brass-300), var(--brass-500) 55%, var(--brass-600) 100%);
+  color: var(--brass-ink);
+  border: 1px solid var(--brass-600);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 3px rgba(74, 52, 22, 0.35),
+    0 1px 3px rgba(20, 38, 31, 0.25);
+}
+
+.stamp--next {
+  border: 1.5px solid var(--brass-500);
+  color: var(--brass-600);
+}
+
+.stamp-row.stamp-row--sm .stamp {
+  --size: 1.5rem;
+  font-size: 0.6rem;
+}
+
+/* -------------------------------------------------------------------------
+   Small reusable surface components
+   ------------------------------------------------------------------------- */
+.card {
+  background: var(--paper-card);
+  border: 1px solid var(--paper-line);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-card);
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.5rem;
+  color: var(--moss-300);
+  font-size: 0.9rem;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sidebar-link:hover {
+  background: var(--ink-700);
+  color: var(--paper);
+}
+
+.sidebar-link.is-active {
+  background: var(--ink-600);
+  color: #fff;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.12s ease, transform 0.05s ease, box-shadow 0.12s ease;
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--brass-500);
+  color: var(--brass-ink);
+}
+.btn-primary:hover {
+  background: var(--brass-600);
+}
+
+.btn-dark {
+  background: var(--ink-900);
+  color: var(--paper);
+}
+.btn-dark:hover {
+  background: var(--ink-700);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-700);
+  border: 1px solid var(--paper-line);
+}
+.btn-ghost:hover {
+  background: rgba(20, 38, 31, 0.05);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.55rem;
+  border-radius: 9999px;
+}
+
+.badge-brass {
+  background: var(--brass-300);
+  color: var(--brass-ink);
+}
+.badge-moss {
+  background: #e3e9db;
+  color: var(--ink-700);
+}
+.badge-brick {
+  background: var(--brick-100);
+  color: var(--brick-500);
+}
+
+.input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--paper-line);
+  background: var(--paper-card);
+  color: var(--ink-900);
+  font-size: 0.95rem;
+}
+.input:focus {
+  border-color: var(--brass-500);
+}

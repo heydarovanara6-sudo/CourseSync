@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Groups — CourseSync{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Teacher</p>
+  <h1 class="font-display text-3xl">Groups</h1>
+</div>
+
+<div class="space-y-3 mb-8">
+  {% for group in groups %}
+    <a href="{{ url_for('teacher.group_detail', group_id=group.id) }}" class="card p-5 flex items-center justify-between hover:border-brass-500 transition-colors block">
+      <div>
+        <p class="font-medium">{{ group.name }}</p>
+        <p class="text-xs text-moss-500 mt-0.5">{{ group.students|length }} student{{ '' if group.students|length == 1 else 's' }} &middot; {{ group.sessions|length }} session{{ '' if group.sessions|length == 1 else 's' }} logged</p>
+      </div>
+      <span class="text-moss-500">&rarr;</span>
+    </a>
+  {% else %}
+    <div class="card p-8 text-center text-moss-500 text-sm">No groups yet — create one below.</div>
+  {% endfor %}
+</div>
+
+<details class="card p-4">
+  <summary class="text-sm font-semibold cursor-pointer select-none">+ Create a group</summary>
+  <form method="POST" action="{{ url_for('teacher.add_group') }}" class="mt-4 space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input class="input" type="text" name="name" placeholder="Group name (e.g. Saturday Beginners)" required />
+    <button type="submit" class="btn btn-dark w-full">Create group</button>
+  </form>
+</details>
+{% endblock %}

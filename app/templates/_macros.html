@@ -1,0 +1,32 @@
+{% macro stamp_card(cycle, size='') %}
+  {# Renders the signature "stamp card": one circle per lesson in the cycle. #}
+  <div class="stamp-row {{ 'stamp-row--sm' if size == 'sm' else '' }}">
+    {% for lesson in cycle.lessons %}
+      {% if lesson.completed %}
+        <div class="stamp stamp--filled" title="Lesson {{ lesson.lesson_number }} — completed">✓</div>
+      {% elif loop.index0 == cycle.lessons_completed %}
+        <div class="stamp stamp--next" title="Lesson {{ lesson.lesson_number }} — next up">{{ lesson.lesson_number }}</div>
+      {% else %}
+        <div class="stamp stamp--empty" title="Lesson {{ lesson.lesson_number }} — upcoming">{{ lesson.lesson_number }}</div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+
+{% macro flashes() %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="space-y-2 mb-6">
+        {% for category, message in messages %}
+          {% set is_error = category in ['error', 'danger'] %}
+          <div class="card px-4 py-3 text-sm flex items-start gap-2 {{ 'border-l-4' }}"
+               style="border-left-color: {{ 'var(--brick-500)' if is_error else 'var(--brass-500)' }};">
+            <span class="font-mono text-xs mt-0.5">{{ '⚠' if is_error else '✓' }}</span>
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+{% endmacro %}

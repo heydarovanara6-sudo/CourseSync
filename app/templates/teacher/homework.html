@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Homework — CourseSync{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Teacher</p>
+  <h1 class="font-display text-3xl">Homework</h1>
+</div>
+
+<div class="space-y-2 mb-8">
+  {% for hw in assignments %}
+    {% set status = hw.status() %}
+    <a href="{{ url_for('teacher.homework_detail', homework_id=hw.id) }}" class="card p-4 flex items-center justify-between hover:border-brass-500 transition-colors block">
+      <div>
+        <p class="text-sm font-medium">{{ hw.title }}</p>
+        <p class="text-xs text-moss-500">{{ hw.student.name }}{% if hw.due_date %} &middot; due {{ hw.due_date.strftime('%b %d, %Y') }}{% endif %}</p>
+      </div>
+      <span class="badge {{ 'badge-brass' if status == 'graded' else ('badge-moss' if status == 'submitted' else 'badge-brick') }}">
+        {{ status.replace('_', ' ') }}
+      </span>
+    </a>
+  {% else %}
+    <div class="card p-8 text-center text-moss-500 text-sm">No homework assigned yet — create one below.</div>
+  {% endfor %}
+</div>
+
+<details class="card p-4">
+  <summary class="text-sm font-semibold cursor-pointer select-none">+ Assign homework</summary>
+  <form method="POST" action="{{ url_for('teacher.add_homework') }}" class="mt-4 space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <select name="student_id" class="input" required {{ 'disabled' if not students }}>
+      <option value="" disabled selected>Assign to&hellip;</option>
+      {% for student in students %}
+        <option value="{{ student.id }}">{{ student.name }}</option>
+      {% endfor %}
+    </select>
+    <input class="input" type="text" name="title" placeholder="Assignment title" required />
+    <textarea class="input" name="description" rows="3" placeholder="Instructions (optional)"></textarea>
+    <input class="input" type="date" name="due_date" />
+    <button type="submit" class="btn btn-dark w-full" {{ 'disabled' if not students }}>Assign</button>
+  </form>
+  {% if not students %}
+    <p class="text-xs text-moss-500 mt-2">You don't have any students assigned yet.</p>
+  {% endif %}
+</details>
+{% endblock %}

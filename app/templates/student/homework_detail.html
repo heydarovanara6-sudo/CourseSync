@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ homework.title }} — CourseSync{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('student.dashboard') }}" class="text-xs text-moss-500 hover:text-ink-900">&larr; My progress</a>
+
+<div class="mt-3 mb-8">
+  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">From {{ homework.teacher.name }}</p>
+  <h1 class="font-display text-3xl">{{ homework.title }}</h1>
+  {% if homework.due_date %}<p class="text-sm text-moss-500 mt-1">Due {{ homework.due_date.strftime('%b %d, %Y') }}</p>{% endif %}
+</div>
+
+{% if homework.description %}
+  <div class="card p-5 mb-6">
+    <p class="text-xs uppercase tracking-wide text-moss-500 mb-2">Instructions</p>
+    <p class="text-sm text-ink-700 leading-relaxed">{{ homework.description }}</p>
+  </div>
+{% endif %}
+
+{% if homework.submission and homework.submission.teacher_feedback %}
+  <div class="card p-5 mb-6">
+    <p class="text-xs uppercase tracking-wide text-moss-500 mb-2">
+      Feedback{% if homework.submission.grade %} &middot; {{ homework.submission.grade }}{% endif %}
+    </p>
+    <p class="text-sm text-ink-700 leading-relaxed">{{ homework.submission.teacher_feedback }}</p>
+  </div>
+{% endif %}
+
+<div class="card p-5">
+  <h2 class="font-display text-xl mb-1">{{ 'Update your submission' if homework.submission else 'Submit your work' }}</h2>
+  {% if homework.submission %}
+    <p class="text-sm text-moss-500 mb-4">Submitting again replaces your previous answer and clears any existing feedback.</p>
+  {% else %}
+    <p class="text-sm text-moss-500 mb-4">Write your answer below, or paste a link to your work.</p>
+  {% endif %}
+  <form method="POST" action="{{ url_for('student.submit_homework', homework_id=homework.id) }}" class="space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <textarea class="input" name="content" rows="6" placeholder="Type your answer here&hellip;" required>{{ homework.submission.content if homework.submission else '' }}</textarea>
+    <input class="input" type="url" name="link" placeholder="Link to a doc/file (optional)" value="{{ homework.submission.link if homework.submission else '' }}" />
+    <button type="submit" class="btn btn-primary">{{ 'Resubmit' if homework.submission else 'Submit' }}</button>
+  </form>
+</div>
+{% endblock %}

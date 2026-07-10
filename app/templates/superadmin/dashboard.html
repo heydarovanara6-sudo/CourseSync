@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Courses — CourseSync{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Superadmin</p>
+  <h1 class="font-display text-3xl">Courses</h1>
+  <p class="text-sm text-moss-500 mt-1">Each course is fully isolated — owners never see each other's teachers, students, or data.</p>
+</div>
+
+<div class="space-y-3 mb-8">
+  {% for course in courses %}
+    {% set owner = course.owner() %}
+    <div class="card p-5 flex items-center justify-between">
+      <div>
+        <p class="font-medium">{{ course.name }}</p>
+        <p class="text-xs text-moss-500 mt-0.5">
+          Owner: {{ owner.name if owner else 'None' }}{% if owner %} ({{ owner.email }}){% endif %}
+          &middot; {{ course.teacher_count() }} staff &middot; {{ course.students|length }} students
+        </p>
+      </div>
+      <form method="POST" action="{{ url_for('superadmin.delete_course', course_id=course.id) }}"
+            onsubmit="return confirm('Delete \'{{ course.name }}\'? This permanently removes every teacher, student, cycle, and homework record in it.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn !text-xs" style="background: var(--brick-100); color: var(--brick-500);">Delete</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="card p-8 text-center text-moss-500 text-sm">No courses yet — create one below.</div>
+  {% endfor %}
+</div>
+
+<details class="card p-4">
+  <summary class="text-sm font-semibold cursor-pointer select-none">+ Create a course</summary>
+  <form method="POST" action="{{ url_for('superadmin.add_course') }}" class="mt-4 space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input class="input" type="text" name="name" placeholder="Course name (e.g. Riverside Tutoring)" required />
+    <div class="border-t border-paper-line pt-3">
+      <p class="text-xs font-semibold uppercase tracking-wide text-ink-700 mb-2">Course owner account</p>
+      <div class="space-y-2">
+        <input class="input" type="text" name="owner_name" placeholder="Owner's full name" required />
+        <input class="input" type="email" name="owner_email" placeholder="Owner's email" required />
+        <input class="input" type="password" name="owner_password" placeholder="Temporary password" required />
+      </div>
+    </div>
+    <button type="submit" class="btn btn-dark w-full">Create course &amp; owner</button>
+  </form>
+</details>
+{% endblock %}

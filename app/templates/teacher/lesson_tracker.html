@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stamp_card %}
+{% block title %}{{ student.name }} — CourseSync{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('teacher.dashboard') }}" class="text-xs text-moss-500 hover:text-ink-900">&larr; My students</a>
+
+<div class="mt-3 mb-8 flex items-center justify-between">
+  <div>
+    <h1 class="font-display text-3xl">{{ student.name }}</h1>
+    {% if student.groups %}
+      <p class="text-sm text-moss-500 mt-1">{{ student.groups|map(attribute='name')|join(', ') }}</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if active_cycle %}
+  <div class="card p-6 mb-8">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="font-display text-xl">Current cycle</h2>
+      <span class="badge {{ 'badge-brass' if active_cycle.is_ready_to_complete() else 'badge-moss' }} font-mono">
+        {{ active_cycle.lessons_completed }} / {{ active_cycle.total_lessons }}
+      </span>
+    </div>
+
+    {{ stamp_card(active_cycle) }}
+
+    <div class="mt-6 flex flex-wrap gap-3">
+      {% if not active_cycle.is_ready_to_complete() %}
+        <form method="POST" action="{{ url_for('teacher.complete_lesson', lesson_id=active_cycle.next_lesson().id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-primary">
+            Log lesson {{ active_cycle.next_lesson().lesson_number }}
+          </button>
+        </form>
+      {% else %}
+        <p class="text-sm text-moss-500 self-center">All lessons stamped — leave feedback below to close out this cycle.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if active_cycle.is_ready_to_complete() %}
+    <div class="card p-6 mb-8">
+      <h2 class="font-display text-xl mb-1">Cycle feedback</h2>
+      <p class="text-sm text-moss-500 mb-4">This closes the cycle and unlocks a new one for {{ student.name.split(' ')[0] }}.</p>
+      <form method="POST" action="{{ url_for('teacher.submit_feedback', cycle_id=active_cycle.id) }}" class="space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <textarea class="input" name="content" rows="4" placeholder="How did the cycle go? Note progress, strengths, and next focus areas." required></textarea>
+        <button type="submit" class="btn btn-dark">Submit feedback &amp; close cycle</button>
+      </form>
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="card p-6 mb-8">
+    <h2 class="font-display text-xl mb-1">Start a new cycle</h2>
+    <p class="text-sm text-moss-500 mb-4">Choose a cycle length to begin stamping lessons for {{ student.name.split(' ')[0] }}.</p>
+    <form method="POST" action="{{ url_for('teacher.start_cycle', student_id=student.id) }}" class="flex flex-wrap items-center gap-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <select name="total_lessons" class="input !w-auto">
+        <option value="8">8 lessons</option>
+        <option value="10">10 lessons</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Start cycle</button>
+    </form>
+  </div>
+{% endif %}
+
+{% if past_cycles %}
+  <h2 class="font-display text-xl mb-3">Past cycles</h2>
+  <div class="space-y-3 mb-10">
+    {% for cycle in past_cycles %}
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="font-mono text-sm text-moss-500">{{ cycle.started_on.strftime('%b %d, %Y') }} &mdash; {{ cycle.total_lessons }} lessons</span>
+          <span class="badge badge-brass">Completed</span>
+        </div>
+        {{ stamp_card(cycle, size='sm') }}
+        {% if cycle.feedback %}
+          <p class="text-sm text-ink-700 mt-4 leading-relaxed border-t border-paper-line pt-4">{{ cycle.feedback.content }}</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<!-- Homework -->
+<section>
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-display text-xl">Homework</h2>
+  </div>
+
+  <div class="space-y-2 mb-4">
+    {% for hw in homework %}
+      {% set status = hw.status() %}
+      <a href="{{ url_for('teacher.homework_detail', homework_id=hw.id) }}" class="card p-4 flex items-center justify-between hover:border-brass-500 transition-colors block">
+        <div>
+          <p class="text-sm font-medium">{{ hw.title }}</p>
+          {% if hw.due_date %}<p class="text-xs text-moss-500">Due {{ hw.due_date.strftime('%b %d, %Y') }}</p>{% endif %}
+        </div>
+        <span class="badge {{ 'badge-brass' if status == 'graded' else ('badge-moss' if status == 'submitted' else 'badge-brick') }}">
+          {{ status.replace('_', ' ') }}
+        </span>
+      </a>
+    {% else %}
+      <p class="text-sm text-moss-500">No homework assigned yet.</p>
+    {% endfor %}
+  </div>
+
+  <details class="card p-4">
+    <summary class="text-sm font-semibold cursor-pointer select-none">+ Assign homework</summary>
+    <form method="POST" action="{{ url_for('teacher.add_homework') }}" class="mt-4 space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="student_id" value="{{ student.id }}" />
+      <input class="input" type="text" name="title" placeholder="Assignment title" required />
+      <textarea class="input" name="description" rows="3" placeholder="Instructions (optional)"></textarea>
+      <input class="input" type="date" name="due_date" />
+      <button type="submit" class="btn btn-dark w-full">Assign to {{ student.name.split(' ')[0] }}</button>
+    </form>
+  </details>
+</section>
+{% endblock %}

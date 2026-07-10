@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stamp_card %}
+{% block title %}{{ student.name }} — CourseSync{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('admin.dashboard') }}" class="text-xs text-moss-500 hover:text-ink-900">&larr; Overview</a>
+
+<div class="mt-3 mb-8 flex items-start justify-between gap-4">
+  <div>
+    <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Student</p>
+    <h1 class="font-display text-3xl">{{ student.name }}</h1>
+    <p class="text-sm text-moss-500 mt-1">{{ student.email or 'No email on file' }} &middot; {{ student.teacher_names() }}</p>
+    {% if student.email and not student.has_login() %}
+      <p class="text-xs text-brick-500 mt-1">No password set — this student can't log in yet. Set one below.</p>
+    {% endif %}
+  </div>
+  <details class="shrink-0">
+    <summary class="btn btn-ghost !text-xs cursor-pointer select-none">Edit / delete</summary>
+    <div class="card p-4 mt-2 w-72 space-y-4">
+      <form method="POST" action="{{ url_for('admin.edit_student', student_id=student.id) }}" class="space-y-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input class="input !text-sm" type="text" name="name" value="{{ student.name }}" required />
+        <input class="input !text-sm" type="email" name="email" value="{{ student.email or '' }}" placeholder="Email (needed to log in)" />
+        <input class="input !text-sm" type="password" name="password" placeholder="Set / change login password" />
+        <button type="submit" class="btn btn-dark w-full !text-xs">Save changes</button>
+      </form>
+      <form method="POST" action="{{ url_for('admin.delete_student', student_id=student.id) }}"
+            onsubmit="return confirm('Delete {{ student.name }}? This removes all their cycles, feedback, attendance, and homework.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn w-full !text-xs" style="background: var(--brick-100); color: var(--brick-500);">Delete student</button>
+      </form>
+    </div>
+  </details>
+</div>
+
+<!-- Teacher assignment -->
+<section class="mb-10">
+  <h2 class="font-display text-xl mb-3">Assigned teachers</h2>
+  <form method="POST" action="{{ url_for('admin.assign_student', student_id=student.id) }}" class="card p-5 space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+      {% for teacher in all_teachers %}
+        <label class="flex items-center gap-1.5">
+          <input type="checkbox" name="teacher_ids" value="{{ teacher.id }}" class="accent-brass-500"
+                 {{ 'checked' if teacher in student.teachers }} />
+          {{ teacher.name }}{{ ' (admin)' if teacher.is_admin() else '' }}
+        </label>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-dark !text-xs">Save teacher assignments</button>
+  </form>
+</section>
+
+<!-- Cycles -->
+<section class="mb-10">
+  <h2 class="font-display text-xl mb-3">Lesson cycles</h2>
+  <div class="space-y-3">
+    {% for cycle in cycles %}
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm font-medium">{{ cycle.teacher.name }}</span>
+          <span class="badge {{ 'badge-brass' if cycle.completed else 'badge-moss' }} font-mono">
+            {{ cycle.lessons_completed }} / {{ cycle.total_lessons }}{{ ' (closed)' if cycle.completed }}
+          </span>
+        </div>
+        {{ stamp_card(cycle, size='sm') }}
+        {% if cycle.feedback %}
+          <p class="text-sm text-ink-700 mt-4 leading-relaxed border-t border-paper-line pt-4">{{ cycle.feedback.content }}</p>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="text-sm text-moss-500">No cycles yet.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Attendance -->
+<section class="mb-10">
+  <h2 class="font-display text-xl mb-3">Attendance history</h2>
+  <div class="card divide-y divide-paper-line">
+    {% for record in attendance %}
+      <div class="px-4 py-3 flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium">{{ record.session.group.name }}</p>
+          <p class="text-xs text-moss-500">{{ record.session.session_date.strftime('%b %d, %Y') }}{% if record.session.topic %} &middot; {{ record.session.topic }}{% endif %}</p>
+        </div>
+        <span class="badge {{ 'badge-brass' if record.present else 'badge-brick' }}">{{ 'Present' if record.present else 'Absent' }}</span>
+      </div>
+    {% else %}
+      <p class="px-4 py-6 text-sm text-moss-500">No attendance recorded yet.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Homework -->
+<section>
+  <h2 class="font-display text-xl mb-3">Homework &amp; submissions</h2>
+  <div class="space-y-3">
+    {% for hw in homework %}
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <p class="text-sm font-medium">{{ hw.title }}</p>
+            <p class="text-xs text-moss-500">from {{ hw.teacher.name }}{% if hw.due_date %} &middot; due {{ hw.due_date.strftime('%b %d') }}{% endif %}</p>
+          </div>
+          {% set status = hw.status() %}
+          <span class="badge {{ 'badge-brass' if status == 'graded' else ('badge-moss' if status == 'submitted' else 'badge-brick') }}">
+            {{ status.replace('_', ' ') }}
+          </span>
+        </div>
+        {% if hw.description %}<p class="text-sm text-ink-700 mb-2">{{ hw.description }}</p>{% endif %}
+        {% if hw.submission %}
+          <div class="border-t border-paper-line pt-3 mt-3">
+            <p class="text-xs uppercase tracking-wide text-moss-500 mb-1">Submission</p>
+            <p class="text-sm text-ink-700 mb-2">{{ hw.submission.content }}</p>
+            {% if hw.submission.link %}<a href="{{ hw.submission.link }}" class="text-xs text-brass-600 hover:underline" target="_blank" rel="noopener">{{ hw.submission.link }}</a>{% endif %}
+            {% if hw.submission.teacher_feedback %}
+              <div class="mt-3 pt-3 border-t border-paper-line">
+                <p class="text-xs uppercase tracking-wide text-moss-500 mb-1">Feedback{% if hw.submission.grade %} &middot; {{ hw.submission.grade }}{% endif %}</p>
+                <p class="text-sm text-ink-700">{{ hw.submission.teacher_feedback }}</p>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="text-sm text-moss-500">No homework assigned yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

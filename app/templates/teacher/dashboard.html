@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stamp_card %}
+{% block title %}My students — CourseSync{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Teacher</p>
+  <h1 class="font-display text-3xl">My students</h1>
+</div>
+
+<div class="space-y-4">
+  {% for student in students %}
+    {% set cycle = student.active_cycle() %}
+    <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}" class="card p-5 flex items-center justify-between gap-4 hover:border-brass-500 transition-colors block">
+      <div class="min-w-0">
+        <p class="font-medium">{{ student.name }}</p>
+        {% if student.group %}
+          <p class="text-xs text-moss-500 mt-0.5">{{ student.group.name }}</p>
+        {% endif %}
+      </div>
+
+      {% if cycle %}
+        <div class="hidden sm:block">{{ stamp_card(cycle, size='sm') }}</div>
+        <span class="badge {{ 'badge-brass' if cycle.is_ready_to_complete() else 'badge-moss' }} shrink-0 font-mono">
+          {{ cycle.lessons_completed }} / {{ cycle.total_lessons }}
+        </span>
+      {% else %}
+        <span class="badge badge-moss shrink-0">No active cycle</span>
+      {% endif %}
+    </a>
+  {% else %}
+    <div class="card p-8 text-center text-moss-500 text-sm">
+      No students assigned to you yet. Your admin can assign students from the Overview page.
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

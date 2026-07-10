@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Create your course — CourseSync{% endblock %}
+
+{% block bare_content %}
+{% from "_macros.html" import flashes %}
+<div class="min-h-screen flex flex-col md:flex-row">
+
+  <!-- Left: brand / hero -->
+  <div class="md:w-1/2 bg-ink-900 text-paper ledger-texture flex flex-col justify-between px-10 py-10 md:px-16 md:py-14">
+    <div class="flex items-center gap-2">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="10" cy="10" r="7.5" stroke="#c4934a" stroke-width="1.6"/>
+        <circle cx="17" cy="17" r="7.5" stroke="#f1f4ea" stroke-width="1.6" fill="#14261f"/>
+      </svg>
+      <span class="font-display text-xl tracking-tight">CourseSync</span>
+    </div>
+
+    <div class="max-w-md">
+      <p class="font-mono text-xs uppercase tracking-widest text-brass-300 mb-4">New course</p>
+      <h1 class="font-display text-4xl md:text-5xl leading-[1.1] mb-6">
+        Your course,<br />your own room.
+      </h1>
+      <p class="text-moss-300 text-sm leading-relaxed mb-8">
+        Creating an account starts a brand new course with you as its owner.
+        Invite your own teachers and students — no other course on CourseSync
+        can see any of it, and you can't see theirs.
+      </p>
+    </div>
+
+    <p class="text-xs text-moss-300">&copy; {{ 2026 }} CourseSync</p>
+  </div>
+
+  <!-- Right: signup form -->
+  <div class="md:w-1/2 flex items-center justify-center px-8 py-14 bg-paper">
+    <div class="w-full max-w-sm">
+      <h2 class="font-display text-2xl mb-1">Start your course</h2>
+      <p class="text-sm text-moss-500 mb-8">You'll be the owner — full control, fully separate from everyone else.</p>
+
+      {{ flashes() }}
+
+      <form method="POST" action="{{ url_for('auth.signup') }}" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div>
+          <label for="course_name" class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Course name</label>
+          <input class="input" type="text" id="course_name" name="course_name" placeholder="e.g. Riverside Tutoring" required autofocus />
+        </div>
+        <div>
+          <label for="name" class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Your name</label>
+          <input class="input" type="text" id="name" name="name" placeholder="Full name" required />
+        </div>
+        <div>
+          <label for="email" class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Email</label>
+          <input class="input" type="email" id="email" name="email" placeholder="you@school.com" required />
+        </div>
+        <div>
+          <label for="password" class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Password</label>
+          <input class="input" type="password" id="password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required />
+        </div>
+        <button type="submit" class="btn btn-primary w-full mt-2">Create my course</button>
+      </form>
+
+      <p class="text-xs text-moss-500 mt-8">
+        Already have an account? <a href="{{ url_for('auth.login') }}" class="text-brass-600 hover:underline font-medium">Log in</a>.
+      </p>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

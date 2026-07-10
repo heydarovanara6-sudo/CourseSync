@@ -1,15 +1,21 @@
 """
-Authentication routes: login / logout for Admins, Teachers, and Students.
+Authentication routes: login / logout / signup for Admins, Teachers, and
+Students.
 
 Admins and Teachers live in the `users` table; Students have their own table
-with their own optional login (see models.Student.has_login()). Both share
+with their own optional login (see models.Student.has_login()). All share
 this one login form — we just look in both tables for a matching email.
+
+Signup is self-service: anyone can create an account, and doing so creates
+a brand new Course with them as its Admin (Course Owner). From there they
+invite their own teachers and students — nobody else ever sees their course.
 """
 
 from flask import Blueprint, request, redirect, url_for, flash, render_template
 from flask_login import login_user, logout_user, login_required, current_user
 
-from app.models import User, Student
+from app import db
+from app.models import User, Student, Course, Role
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -30,6 +36,42 @@ def index():
     if current_user.is_authenticated:
         return redirect(_dashboard_for(current_user))
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/signup", methods=["GET", "POST"])
+def signup():
+    """Anyone can sign up. Signing up creates a new Course with you as its Admin."""
+    if current_user.is_authenticated:
+        return redirect(url_for("auth.index"))
+
+    if request.method == "GET":
+        return render_template("signup.html")
+
+    course_name = request.form.get("course_name", "").strip()
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+
+    if not all([course_name, name, email, password]):
+        flash("All fields are required.", "error")
+        return redirect(url_for("auth.signup"))
+
+    if User.query.filter_by(email=email).first():
+        flash("An account with that email already exists. Try logging in instead.", "error")
+        return redirect(url_for("auth.signup"))
+
+    course = Course(name=course_name)
+    db.session.add(course)
+    db.session.flush()  # get course.id before creating the owner
+
+    owner = User(name=name, email=email, role=Role.ADMIN.value, course_id=course.id)
+    owner.set_password(password)
+    db.session.add(owner)
+    db.session.commit()
+
+    login_user(owner)
+    flash(f'"{course_name}" is ready — invite your first teacher to get started.', "success")
+    return redirect(url_for("admin.dashboard"))
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])

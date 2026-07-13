@@ -29,12 +29,22 @@ def create_app(config_object=None):
     app = Flask(__name__, instance_relative_config=True)
 
     # --- Core configuration -------------------------------------------------
+    database_url = os.environ.get(
+        "DATABASE_URL",
+        "sqlite:///" + os.path.join(app.instance_path, "coursesync.db"),
+    )
+    # Providers hand out plain "postgres://" or "postgresql://" URLs, which
+    # SQLAlchemy defaults to the psycopg2 driver for. We use psycopg (v3)
+    # instead — it has proper wheels for newer Python versions — so rewrite
+    # the URL to explicitly request it.
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-secret-key-change-me"),
-        SQLALCHEMY_DATABASE_URI=os.environ.get(
-            "DATABASE_URL",
-            "sqlite:///" + os.path.join(app.instance_path, "coursesync.db"),
-        ),
+        SQLALCHEMY_DATABASE_URI=database_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",

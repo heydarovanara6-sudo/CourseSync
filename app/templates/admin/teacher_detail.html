@@ -11,25 +11,38 @@
     <h1 class="font-display text-3xl">{{ teacher.name }}</h1>
     <p class="text-sm text-moss-500 mt-1">{{ teacher.email }}</p>
   </div>
-  {% if not teacher.is_admin() %}
-    <details class="shrink-0">
-      <summary class="btn btn-ghost !text-xs cursor-pointer select-none">Edit / delete</summary>
-      <div class="card p-4 mt-2 w-72 space-y-4">
-        <form method="POST" action="{{ url_for('admin.edit_teacher', teacher_id=teacher.id) }}" class="space-y-2">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <input class="input !text-sm" type="text" name="name" value="{{ teacher.name }}" required />
-          <input class="input !text-sm" type="email" name="email" value="{{ teacher.email }}" required />
-          <input class="input !text-sm" type="password" name="password" placeholder="New password (optional)" />
-          <button type="submit" class="btn btn-dark w-full !text-xs">Save changes</button>
-        </form>
-        <form method="POST" action="{{ url_for('admin.delete_teacher', teacher_id=teacher.id) }}"
-              onsubmit="return confirm('Delete {{ teacher.name }}? This removes their groups too. Students stay, minus this teacher.');">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <button type="submit" class="btn w-full !text-xs" style="background: var(--brick-100); color: var(--brick-500);">Delete teacher</button>
-        </form>
-      </div>
-    </details>
-  {% endif %}
+  <div class="flex items-start gap-2 shrink-0">
+    {% if not teacher.is_admin() %}
+      <form method="POST" action="{{ url_for('admin.promote_teacher', teacher_id=teacher.id) }}"
+            onsubmit="return confirm('Make {{ teacher.name }} a course admin? They will have full control over this course, including adding/removing teachers and students.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-ghost !text-xs">Make admin</button>
+      </form>
+      <details class="shrink-0">
+        <summary class="btn btn-ghost !text-xs cursor-pointer select-none">Edit / delete</summary>
+        <div class="card p-4 mt-2 w-72 space-y-4">
+          <form method="POST" action="{{ url_for('admin.edit_teacher', teacher_id=teacher.id) }}" class="space-y-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input class="input !text-sm" type="text" name="name" value="{{ teacher.name }}" required />
+            <input class="input !text-sm" type="email" name="email" value="{{ teacher.email }}" required />
+            <input class="input !text-sm" type="password" name="password" placeholder="New password (optional)" />
+            <button type="submit" class="btn btn-dark w-full !text-xs">Save changes</button>
+          </form>
+          <form method="POST" action="{{ url_for('admin.delete_teacher', teacher_id=teacher.id) }}"
+                onsubmit="return confirm('Delete {{ teacher.name }}? This removes their groups too. Students stay, minus this teacher.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn w-full !text-xs" style="background: var(--brick-100); color: var(--brick-500);">Delete teacher</button>
+          </form>
+        </div>
+      </details>
+    {% else %}
+      <form method="POST" action="{{ url_for('admin.demote_admin', teacher_id=teacher.id) }}"
+            onsubmit="return confirm('Remove admin access for {{ teacher.name }}? They will become a regular teacher.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-ghost !text-xs">Remove admin access</button>
+      </form>
+    {% endif %}
+  </div>
 </div>
 
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">

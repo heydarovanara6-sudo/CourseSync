@@ -6,9 +6,11 @@ Admins and Teachers live in the `users` table; Students have their own table
 with their own optional login (see models.Student.has_login()). All share
 this one login form — we just look in both tables for a matching email.
 
-Signup is self-service: anyone can create an account, and doing so creates
-a brand new Course with them as its Admin (Course Owner). From there they
-invite their own teachers and students — nobody else ever sees their course.
+Three ways to get an account:
+- Course Owner: /signup — creates a brand new Course with you as its Admin.
+- Teacher / Student: /join/teacher or /join/student — pick an existing
+  course from the list, then the course's Admin assigns you to the right
+  people from their dashboard (existing assign_student / group flows).
 """
 
 from flask import Blueprint, request, redirect, url_for, flash, render_template
@@ -72,6 +74,80 @@ def signup():
     login_user(owner)
     flash(f'"{course_name}" is ready — invite your first teacher to get started.', "success")
     return redirect(url_for("admin.dashboard"))
+
+
+@auth_bp.route("/join/teacher", methods=["GET", "POST"])
+def join_teacher():
+    """A teacher signs up by picking which existing course they're joining.
+    They start out unassigned to any students — the course's Admin assigns
+    students to them afterward."""
+    if current_user.is_authenticated:
+        return redirect(url_for("auth.index"))
+
+    courses = Course.query.order_by(Course.name).all()
+
+    if request.method == "GET":
+        return render_template("join.html", role="teacher", courses=courses)
+
+    course_id = request.form.get("course_id", type=int)
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+
+    course = Course.query.get(course_id)
+    if not course or not name or not email or not password:
+        flash("Pick a course and fill in every field.", "error")
+        return redirect(url_for("auth.join_teacher"))
+
+    if User.query.filter_by(email=email).first():
+        flash("An account with that email already exists. Try logging in instead.", "error")
+        return redirect(url_for("auth.join_teacher"))
+
+    teacher = User(name=name, email=email, role=Role.TEACHER.value, course_id=course.id)
+    teacher.set_password(password)
+    db.session.add(teacher)
+    db.session.commit()
+
+    login_user(teacher)
+    flash(f"Welcome to {course.name}! Your course admin will assign you students.", "success")
+    return redirect(url_for("teacher.dashboard"))
+
+
+@auth_bp.route("/join/student", methods=["GET", "POST"])
+def join_student():
+    """A student signs up by picking which existing course they're joining.
+    They start out unassigned to any teacher — the course's Admin assigns
+    them afterward."""
+    if current_user.is_authenticated:
+        return redirect(url_for("auth.index"))
+
+    courses = Course.query.order_by(Course.name).all()
+
+    if request.method == "GET":
+        return render_template("join.html", role="student", courses=courses)
+
+    course_id = request.form.get("course_id", type=int)
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+
+    course = Course.query.get(course_id)
+    if not course or not name or not email or not password:
+        flash("Pick a course and fill in every field.", "error")
+        return redirect(url_for("auth.join_student"))
+
+    if Student.query.filter_by(email=email).first() or User.query.filter_by(email=email).first():
+        flash("An account with that email already exists. Try logging in instead.", "error")
+        return redirect(url_for("auth.join_student"))
+
+    student = Student(name=name, email=email, course_id=course.id)
+    student.set_password(password)
+    db.session.add(student)
+    db.session.commit()
+
+    login_user(student)
+    flash(f"Welcome to {course.name}! Your course admin will assign you a teacher.", "success")
+    return redirect(url_for("student.dashboard"))
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])

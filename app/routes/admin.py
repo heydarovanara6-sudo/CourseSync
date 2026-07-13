@@ -158,6 +158,41 @@ def delete_teacher(teacher_id):
     return redirect(url_for("admin.dashboard"))
 
 
+@admin_bp.route("/teachers/<int:teacher_id>/promote", methods=["POST"])
+@admin_required
+def promote_teacher(teacher_id):
+    """Give a teacher full admin (co-owner) rights over this course."""
+    teacher = User.query.filter_by(
+        id=teacher_id, course_id=current_user.course_id, role=Role.TEACHER.value
+    ).first_or_404()
+
+    teacher.role = Role.ADMIN.value
+    db.session.commit()
+    flash(f"{teacher.name} is now a course admin.", "success")
+    return redirect(url_for("admin.teacher_detail", teacher_id=teacher.id))
+
+
+@admin_bp.route("/teachers/<int:teacher_id>/demote", methods=["POST"])
+@admin_required
+def demote_admin(teacher_id):
+    """Remove another admin's admin rights, turning them back into a regular teacher."""
+    target = User.query.filter_by(
+        id=teacher_id, course_id=current_user.course_id, role=Role.ADMIN.value
+    ).first_or_404()
+
+    remaining_admins = User.query.filter_by(
+        course_id=current_user.course_id, role=Role.ADMIN.value
+    ).count()
+    if remaining_admins <= 1:
+        flash("You can't remove the only admin left in this course.", "error")
+        return redirect(url_for("admin.teacher_detail", teacher_id=target.id))
+
+    target.role = Role.TEACHER.value
+    db.session.commit()
+    flash(f"{target.name} is no longer a course admin.", "success")
+    return redirect(url_for("admin.teacher_detail", teacher_id=target.id))
+
+
 # ---------------------------------------------------------------------------
 # Students: create / view / edit / delete / assign
 # ---------------------------------------------------------------------------

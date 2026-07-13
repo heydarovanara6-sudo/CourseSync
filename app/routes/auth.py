@@ -6,7 +6,8 @@ Admins and Teachers live in the `users` table; Students have their own table
 with their own optional login (see models.Student.has_login()). All share
 this one login form — we just look in both tables for a matching email.
 
-Three ways to get an account:
+Signup is one page (templates/signup.html) with a role switcher — Course
+Owner / Teacher / Student — each posting to its own route below:
 - Course Owner: /signup — creates a brand new Course with you as its Admin.
 - Teacher / Student: /join/teacher or /join/student — pick an existing
   course from the list, then the course's Admin assigns you to the right
@@ -47,7 +48,8 @@ def signup():
         return redirect(url_for("auth.index"))
 
     if request.method == "GET":
-        return render_template("signup.html")
+        courses = Course.query.order_by(Course.name).all()
+        return render_template("signup.html", default_role="owner", courses=courses)
 
     course_name = request.form.get("course_name", "").strip()
     name = request.form.get("name", "").strip()
@@ -87,7 +89,7 @@ def join_teacher():
     courses = Course.query.order_by(Course.name).all()
 
     if request.method == "GET":
-        return render_template("join.html", role="teacher", courses=courses)
+        return render_template("signup.html", default_role="teacher", courses=courses)
 
     course_id = request.form.get("course_id", type=int)
     name = request.form.get("name", "").strip()
@@ -124,7 +126,7 @@ def join_student():
     courses = Course.query.order_by(Course.name).all()
 
     if request.method == "GET":
-        return render_template("join.html", role="student", courses=courses)
+        return render_template("signup.html", default_role="student", courses=courses)
 
     course_id = request.form.get("course_id", type=int)
     name = request.form.get("name", "").strip()

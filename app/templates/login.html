@@ -66,11 +66,11 @@
         <button type="submit" class="btn btn-primary w-full mt-2">Log in</button>
       </form>
 
-      <p class="text-xs text-moss-500 mt-8 space-y-1">
-        <span class="block">Running your own course? <a href="{{ url_for('auth.signup') }}" class="text-brass-600 hover:underline font-medium">Create an account</a>.</span>
-        <span class="block">Teaching somewhere? <a href="{{ url_for('auth.join_teacher') }}" class="text-brass-600 hover:underline font-medium">Join as a teacher</a>.</span>
-        <span class="block">A student? <a href="{{ url_for('auth.join_student') }}" class="text-brass-600 hover:underline font-medium">Join as a student</a>.</span>
+<p class="text-xs text-moss-500 mt-8">
+        New here? <a href="{{ url_for('auth.signup') }}" class="text-brass-600 hover:underline font-medium">Create an account</a> — as a course owner, teacher, or student.
       </p>
+    </div>
+  </div>
 
 </div>
 {% endblock %}

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Create your course — CourseSync{% endblock %}
+{% block title %}Create your account — CourseSync{% endblock %}
 
 {% block bare_content %}
 {% from "_macros.html" import flashes %}
 <div class="min-h-screen flex flex-col md:flex-row">
 
-  <!-- Left: brand / hero -->
+  <!-- Left: brand / hero (copy swaps per role via JS) -->
   <div class="md:w-1/2 bg-ink-900 text-paper ledger-texture flex flex-col justify-between px-10 py-10 md:px-16 md:py-14">
     <div class="flex items-center gap-2">
       <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -16,47 +16,131 @@
     </div>
 
     <div class="max-w-md">
-      <p class="font-mono text-xs uppercase tracking-widest text-brass-300 mb-4">New course</p>
-      <h1 class="font-display text-4xl md:text-5xl leading-[1.1] mb-6">
-        Your course,<br />your own room.
-      </h1>
-      <p class="text-moss-300 text-sm leading-relaxed mb-8">
-        Creating an account starts a brand new course with you as its owner.
-        Invite your own teachers and students — no other course on CourseSync
-        can see any of it, and you can't see theirs.
-      </p>
+      <div data-hero="owner" class="hidden">
+        <p class="font-mono text-xs uppercase tracking-widest text-brass-300 mb-4">New course</p>
+        <h1 class="font-display text-4xl md:text-5xl leading-[1.1] mb-6">Your course,<br />your own room.</h1>
+        <p class="text-moss-300 text-sm leading-relaxed mb-8">
+          Creating an account starts a brand new course with you as its owner.
+          Invite your own teachers and students — no other course on CourseSync
+          can see any of it, and you can't see theirs.
+        </p>
+      </div>
+      <div data-hero="teacher" class="hidden">
+        <p class="font-mono text-xs uppercase tracking-widest text-brass-300 mb-4">Join as a teacher</p>
+        <h1 class="font-display text-4xl md:text-5xl leading-[1.1] mb-6">Pick your course,<br />start teaching.</h1>
+        <p class="text-moss-300 text-sm leading-relaxed mb-8">
+          Choose the course you teach for. Once you're in, your course admin
+          assigns you the right students — no invite needed to get started.
+        </p>
+      </div>
+      <div data-hero="student" class="hidden">
+        <p class="font-mono text-xs uppercase tracking-widest text-brass-300 mb-4">Join as a student</p>
+        <h1 class="font-display text-4xl md:text-5xl leading-[1.1] mb-6">Pick your course,<br />start learning.</h1>
+        <p class="text-moss-300 text-sm leading-relaxed mb-8">
+          Choose your course. Once you're in, your course admin assigns you
+          to the right teacher — no invite needed to get started.
+        </p>
+      </div>
     </div>
 
     <p class="text-xs text-moss-300">&copy; {{ 2026 }} CourseSync</p>
   </div>
 
-  <!-- Right: signup form -->
+  <!-- Right: role switcher + forms -->
   <div class="md:w-1/2 flex items-center justify-center px-8 py-14 bg-paper">
     <div class="w-full max-w-sm">
-      <h2 class="font-display text-2xl mb-1">Start your course</h2>
-      <p class="text-sm text-moss-500 mb-8">You'll be the owner — full control, fully separate from everyone else.</p>
+      <h2 class="font-display text-2xl mb-1">Create your account</h2>
+      <p class="text-sm text-moss-500 mb-6">First, tell us who you are.</p>
+
+      <!-- Role tabs -->
+      <div class="grid grid-cols-3 gap-2 mb-6" role="tablist">
+        <button type="button" data-tab="owner" class="btn btn-ghost !text-xs justify-center">Course owner</button>
+        <button type="button" data-tab="teacher" class="btn btn-ghost !text-xs justify-center">Teacher</button>
+        <button type="button" data-tab="student" class="btn btn-ghost !text-xs justify-center">Student</button>
+      </div>
 
       {{ flashes() }}
 
-      <form method="POST" action="{{ url_for('auth.signup') }}" class="space-y-4">
+      <!-- Course owner form -->
+      <form data-form="owner" method="POST" action="{{ url_for('auth.signup') }}" class="space-y-4 hidden">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <div>
-          <label for="course_name" class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Course name</label>
-          <input class="input" type="text" id="course_name" name="course_name" placeholder="e.g. Riverside Tutoring" required autofocus />
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Course name</label>
+          <input class="input" type="text" name="course_name" placeholder="e.g. Riverside Tutoring" required />
         </div>
         <div>
-          <label for="name" class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Your name</label>
-          <input class="input" type="text" id="name" name="name" placeholder="Full name" required />
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Your name</label>
+          <input class="input" type="text" name="name" placeholder="Full name" required />
         </div>
         <div>
-          <label for="email" class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Email</label>
-          <input class="input" type="email" id="email" name="email" placeholder="you@school.com" required />
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Email</label>
+          <input class="input" type="email" name="email" placeholder="you@school.com" required />
         </div>
         <div>
-          <label for="password" class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Password</label>
-          <input class="input" type="password" id="password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required />
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Password</label>
+          <input class="input" type="password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required />
         </div>
         <button type="submit" class="btn btn-primary w-full mt-2">Create my course</button>
+      </form>
+
+      <!-- Teacher form -->
+      <form data-form="teacher" method="POST" action="{{ url_for('auth.join_teacher') }}" class="space-y-4 hidden">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Course</label>
+          <select class="input" name="course_id" required {{ 'disabled' if not courses }}>
+            <option value="" disabled selected>Choose your course&hellip;</option>
+            {% for course in courses %}
+              <option value="{{ course.id }}">{{ course.name }}</option>
+            {% endfor %}
+          </select>
+          {% if not courses %}
+            <p class="text-xs text-brick-500 mt-1.5">No courses exist yet — ask your course owner to sign up first.</p>
+          {% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Your name</label>
+          <input class="input" type="text" name="name" placeholder="Full name" required />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Email</label>
+          <input class="input" type="email" name="email" placeholder="you@school.com" required />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Password</label>
+          <input class="input" type="password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required />
+        </div>
+        <button type="submit" class="btn btn-primary w-full mt-2" {{ 'disabled' if not courses }}>Join course</button>
+      </form>
+
+      <!-- Student form -->
+      <form data-form="student" method="POST" action="{{ url_for('auth.join_student') }}" class="space-y-4 hidden">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Course</label>
+          <select class="input" name="course_id" required {{ 'disabled' if not courses }}>
+            <option value="" disabled selected>Choose your course&hellip;</option>
+            {% for course in courses %}
+              <option value="{{ course.id }}">{{ course.name }}</option>
+            {% endfor %}
+          </select>
+          {% if not courses %}
+            <p class="text-xs text-brick-500 mt-1.5">No courses exist yet — ask your course owner to sign up first.</p>
+          {% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Your name</label>
+          <input class="input" type="text" name="name" placeholder="Full name" required />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Email</label>
+          <input class="input" type="email" name="email" placeholder="you@school.com" required />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Password</label>
+          <input class="input" type="password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required />
+        </div>
+        <button type="submit" class="btn btn-primary w-full mt-2" {{ 'disabled' if not courses }}>Join course</button>
       </form>
 
       <p class="text-xs text-moss-500 mt-8">
@@ -66,4 +150,35 @@
   </div>
 
 </div>
+
+<script>
+  (function () {
+    var defaultRole = {{ default_role|tojson }};
+    var tabs = document.querySelectorAll('[data-tab]');
+    var forms = document.querySelectorAll('[data-form]');
+    var heroes = document.querySelectorAll('[data-hero]');
+
+    function activate(role) {
+      tabs.forEach(function (t) {
+        var isActive = t.getAttribute('data-tab') === role;
+        t.classList.toggle('btn-dark', isActive);
+        t.classList.toggle('btn-ghost', !isActive);
+      });
+      forms.forEach(function (f) {
+        f.classList.toggle('hidden', f.getAttribute('data-form') !== role);
+      });
+      heroes.forEach(function (h) {
+        h.classList.toggle('hidden', h.getAttribute('data-hero') !== role);
+      });
+    }
+
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        activate(t.getAttribute('data-tab'));
+      });
+    });
+
+    activate(defaultRole);
+  })();
+</script>
 {% endblock %}

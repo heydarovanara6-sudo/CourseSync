@@ -104,7 +104,8 @@ class User(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    username = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default=Role.TEACHER.value)
     is_active_flag = db.Column("is_active", db.Boolean, default=True, nullable=False)
@@ -156,7 +157,7 @@ class User(UserMixin, db.Model):
         return False
 
     def __repr__(self):
-        return f"<User {self.email} ({self.role})>"
+        return f"<User {self.username} ({self.role})>"
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +194,7 @@ class Student(UserMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
+    username = db.Column(db.String(64), unique=True, nullable=True, index=True)
     email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(255), nullable=True)
 
@@ -233,7 +235,7 @@ class Student(UserMixin, db.Model):
         return f"student-{self.id}"
 
     def has_login(self) -> bool:
-        return self.password_hash is not None
+        return self.password_hash is not None and self.username is not None
 
     def set_password(self, raw_password: str) -> None:
         self.password_hash = generate_password_hash(raw_password)

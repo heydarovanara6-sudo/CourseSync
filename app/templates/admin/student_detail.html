@@ -9,9 +9,13 @@
   <div>
     <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Student</p>
     <h1 class="font-display text-3xl">{{ student.name }}</h1>
-    <p class="text-sm text-moss-500 mt-1">{{ student.email or 'No email on file' }} &middot; {{ student.teacher_names() }}</p>
-    {% if student.email and not student.has_login() %}
+    <p class="text-sm text-moss-500 mt-1">
+      {{ '@' + student.username if student.username else 'No username set' }}{% if student.email %} &middot; {{ student.email }}{% endif %} &middot; {{ student.teacher_names() }}
+    </p>
+    {% if student.username and not student.has_login() %}
       <p class="text-xs text-brick-500 mt-1">No password set — this student can't log in yet. Set one below.</p>
+    {% elif not student.username %}
+      <p class="text-xs text-brick-500 mt-1">No username set — this student can't log in yet. Set one below.</p>
     {% endif %}
   </div>
   <details class="shrink-0">
@@ -20,7 +24,8 @@
       <form method="POST" action="{{ url_for('admin.edit_student', student_id=student.id) }}" class="space-y-2">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input class="input !text-sm" type="text" name="name" value="{{ student.name }}" required />
-        <input class="input !text-sm" type="email" name="email" value="{{ student.email or '' }}" placeholder="Email (needed to log in)" />
+        <input class="input !text-sm" type="text" name="username" value="{{ student.username or '' }}" placeholder="Username (needed to log in)" autocapitalize="off" autocorrect="off" />
+        <input class="input !text-sm" type="email" name="email" value="{{ student.email or '' }}" placeholder="Email (optional)" />
         <input class="input !text-sm" type="password" name="password" placeholder="Set / change login password" />
         <button type="submit" class="btn btn-dark w-full !text-xs">Save changes</button>
       </form>

@@ -15,7 +15,7 @@
       <div>
         <p class="font-medium">{{ course.name }}</p>
         <p class="text-xs text-moss-500 mt-0.5">
-          Owner: {{ owner.name if owner else 'None' }}{% if owner %} ({{ owner.email }}){% endif %}
+          Owner: {{ owner.name if owner else 'None' }}{% if owner %} (@{{ owner.username }}){% endif %}
           &middot; {{ course.teacher_count() }} staff &middot; {{ course.students|length }} students
         </p>
       </div>
@@ -39,7 +39,8 @@
       <p class="text-xs font-semibold uppercase tracking-wide text-ink-700 mb-2">Course owner account</p>
       <div class="space-y-2">
         <input class="input" type="text" name="owner_name" placeholder="Owner's full name" required />
-        <input class="input" type="email" name="owner_email" placeholder="Owner's email" required />
+        <input class="input" type="text" name="owner_username" placeholder="Owner's username" required autocapitalize="off" autocorrect="off" />
+        <input class="input" type="email" name="owner_email" placeholder="Owner's email (optional)" />
         <input class="input" type="password" name="owner_password" placeholder="Temporary password" required />
       </div>
     </div>

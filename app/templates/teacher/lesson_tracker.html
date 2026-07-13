@@ -18,9 +18,18 @@
   <div class="card p-6 mb-8">
     <div class="flex items-center justify-between mb-5">
       <h2 class="font-display text-xl">Current cycle</h2>
-      <span class="badge {{ 'badge-brass' if active_cycle.is_ready_to_complete() else 'badge-moss' }} font-mono">
-        {{ active_cycle.lessons_completed }} / {{ active_cycle.total_lessons }}
-      </span>
+      <div class="flex items-center gap-3">
+        <span class="badge {{ 'badge-brass' if active_cycle.is_ready_to_complete() else 'badge-moss' }} font-mono">
+          {{ active_cycle.lessons_completed }} / {{ active_cycle.total_lessons }}
+        </span>
+        <form method="POST" action="{{ url_for('teacher.resize_cycle', cycle_id=active_cycle.id) }}" class="flex items-center gap-1.5">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <select name="total_lessons" class="input !w-auto !py-1 !text-xs" onchange="this.form.submit()">
+            <option value="8" {{ 'selected' if active_cycle.total_lessons == 8 }}>8 lessons</option>
+            <option value="10" {{ 'selected' if active_cycle.total_lessons == 10 }}>10 lessons</option>
+          </select>
+        </form>
+      </div>
     </div>
 
     {{ stamp_card(active_cycle) }}

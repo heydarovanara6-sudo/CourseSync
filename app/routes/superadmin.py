@@ -13,7 +13,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
 from app import db
-from app.models import Course, User, Role
+from app.models import Course, User, Student, Role
+from app.routes.auth import _username_taken
 
 superadmin_bp = Blueprint("superadmin", __name__)
 
@@ -41,22 +42,23 @@ def dashboard():
 def add_course():
     name = request.form.get("name", "").strip()
     owner_name = request.form.get("owner_name", "").strip()
-    owner_email = request.form.get("owner_email", "").strip().lower()
+    owner_username = request.form.get("owner_username", "").strip().lower()
+    owner_email = request.form.get("owner_email", "").strip().lower() or None
     owner_password = request.form.get("owner_password", "")
 
-    if not all([name, owner_name, owner_email, owner_password]):
-        flash("Course name and owner details are all required.", "error")
+    if not all([name, owner_name, owner_username, owner_password]):
+        flash("Course name and owner details (including a username) are all required.", "error")
         return redirect(url_for("superadmin.dashboard"))
 
-    if User.query.filter_by(email=owner_email).first():
-        flash(f"An account with {owner_email} already exists.", "error")
+    if _username_taken(owner_username):
+        flash(f'The username "{owner_username}" is already taken.', "error")
         return redirect(url_for("superadmin.dashboard"))
 
     course = Course(name=name)
     db.session.add(course)
     db.session.flush()  # get course.id before creating the owner
 
-    owner = User(name=owner_name, email=owner_email, role=Role.ADMIN.value, course_id=course.id)
+    owner = User(name=owner_name, username=owner_username, email=owner_email, role=Role.ADMIN.value, course_id=course.id)
     owner.set_password(owner_password)
     db.session.add(owner)
     db.session.commit()

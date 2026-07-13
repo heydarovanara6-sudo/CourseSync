@@ -18,6 +18,7 @@ from flask_login import login_required, current_user
 
 from app import db
 from app.models import User, Student, Role, Cycle, Attendance, Homework, TimetableEntry
+from app.routes.auth import _username_taken
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -67,18 +68,19 @@ def dashboard():
 @admin_required
 def add_teacher():
     name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip().lower()
+    username = request.form.get("username", "").strip().lower()
+    email = request.form.get("email", "").strip().lower() or None
     password = request.form.get("password", "")
 
-    if not name or not email or not password:
-        flash("Name, email, and password are all required.", "error")
+    if not name or not username or not password:
+        flash("Name, username, and password are all required.", "error")
         return redirect(url_for("admin.dashboard"))
 
-    if User.query.filter_by(email=email).first():
-        flash(f"An account with {email} already exists.", "error")
+    if _username_taken(username):
+        flash(f'The username "{username}" is already taken.', "error")
         return redirect(url_for("admin.dashboard"))
 
-    teacher = User(name=name, email=email, role=Role.TEACHER.value, course_id=current_user.course_id)
+    teacher = User(name=name, username=username, email=email, role=Role.TEACHER.value, course_id=current_user.course_id)
     teacher.set_password(password)
     db.session.add(teacher)
     db.session.commit()
@@ -122,19 +124,24 @@ def edit_teacher(teacher_id):
     ).first_or_404()
 
     name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip().lower()
+    username = request.form.get("username", "").strip().lower()
+    email = request.form.get("email", "").strip().lower() or None
     new_password = request.form.get("password", "").strip()
 
-    if not name or not email:
-        flash("Name and email are required.", "error")
+    if not name or not username:
+        flash("Name and username are required.", "error")
         return redirect(url_for("admin.teacher_detail", teacher_id=teacher.id))
 
-    existing = User.query.filter(User.email == email, User.id != teacher.id).first()
-    if existing:
-        flash(f"Another account already uses {email}.", "error")
+    username_owner = User.query.filter_by(username=username).first()
+    if username_owner and username_owner.id != teacher.id:
+        flash(f'The username "{username}" is already taken.', "error")
+        return redirect(url_for("admin.teacher_detail", teacher_id=teacher.id))
+    if Student.query.filter_by(username=username).first():
+        flash(f'The username "{username}" is already taken.', "error")
         return redirect(url_for("admin.teacher_detail", teacher_id=teacher.id))
 
     teacher.name = name
+    teacher.username = username
     teacher.email = email
     if new_password:
         teacher.set_password(new_password)
@@ -201,7 +208,9 @@ def demote_admin(teacher_id):
 @admin_required
 def add_student():
     name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip() or None
+    username = request.form.get("username", "").strip().lower() or None
+    password = request.form.get("password", "").strip() or None
+    email = request.form.get("email", "").strip().lower() or None
     teacher_ids = request.form.getlist("teacher_ids", type=int)
 
     # Only teachers within THIS course can ever be assigned — even if the
@@ -214,7 +223,17 @@ def add_student():
         flash("A name and at least one teacher are required.", "error")
         return redirect(url_for("admin.dashboard"))
 
-    student = Student(name=name, email=email, teachers=teachers, course_id=current_user.course_id)
+    if password and not username:
+        flash("Give the student a username so that password can be used to log in.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    if username and _username_taken(username):
+        flash(f'The username "{username}" is already taken.', "error")
+        return redirect(url_for("admin.dashboard"))
+
+    student = Student(name=name, username=username, email=email, teachers=teachers, course_id=current_user.course_id)
+    if password:
+        student.set_password(password)
     db.session.add(student)
     db.session.commit()
 
@@ -255,7 +274,8 @@ def edit_student(student_id):
     student = Student.query.filter_by(id=student_id, course_id=current_user.course_id).first_or_404()
 
     name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip() or None
+    username = request.form.get("username", "").strip().lower() or None
+    email = request.form.get("email", "").strip().lower() or None
     new_password = request.form.get("password", "").strip()
 
     if not name:
@@ -268,11 +288,21 @@ def edit_student(student_id):
             flash(f"Another student already uses {email}.", "error")
             return redirect(url_for("admin.student_detail", student_id=student.id))
 
+    if username:
+        username_owner = Student.query.filter_by(username=username).first()
+        if username_owner and username_owner.id != student.id:
+            flash(f'The username "{username}" is already taken.', "error")
+            return redirect(url_for("admin.student_detail", student_id=student.id))
+        if User.query.filter_by(username=username).first():
+            flash(f'The username "{username}" is already taken.', "error")
+            return redirect(url_for("admin.student_detail", student_id=student.id))
+
     student.name = name
+    student.username = username
     student.email = email
     if new_password:
-        if not email:
-            flash("A student needs an email set before they can log in.", "error")
+        if not username:
+            flash("A student needs a username set before they can log in.", "error")
             return redirect(url_for("admin.student_detail", student_id=student.id))
         student.set_password(new_password)
 

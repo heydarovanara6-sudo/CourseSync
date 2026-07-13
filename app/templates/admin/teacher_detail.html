@@ -9,7 +9,7 @@
   <div>
     <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">{{ 'Admin (teaching)' if teacher.is_admin() else 'Teacher' }}</p>
     <h1 class="font-display text-3xl">{{ teacher.name }}</h1>
-    <p class="text-sm text-moss-500 mt-1">{{ teacher.email }}</p>
+    <p class="text-sm text-moss-500 mt-1">@{{ teacher.username }}{% if teacher.email %} &middot; {{ teacher.email }}{% endif %}</p>
   </div>
   <div class="flex items-start gap-2 shrink-0">
     {% if not teacher.is_admin() %}
@@ -24,7 +24,8 @@
           <form method="POST" action="{{ url_for('admin.edit_teacher', teacher_id=teacher.id) }}" class="space-y-2">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <input class="input !text-sm" type="text" name="name" value="{{ teacher.name }}" required />
-            <input class="input !text-sm" type="email" name="email" value="{{ teacher.email }}" required />
+            <input class="input !text-sm" type="text" name="username" value="{{ teacher.username }}" required autocapitalize="off" autocorrect="off" />
+            <input class="input !text-sm" type="email" name="email" value="{{ teacher.email or '' }}" placeholder="Email (optional)" />
             <input class="input !text-sm" type="password" name="password" placeholder="New password (optional)" />
             <button type="submit" class="btn btn-dark w-full !text-xs">Save changes</button>
           </form>

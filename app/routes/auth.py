@@ -2,9 +2,9 @@
 Authentication routes: login / logout / signup for Admins, Teachers, and
 Students.
 
-Admins and Teachers live in the `users` table; Students have their own table
-with their own optional login (see models.Student.has_login()). All share
-this one login form — we just look in both tables for a matching email.
+Login is by USERNAME, not email — usernames are unique across the whole
+system (checked against both the Users table and the Students table, since
+they share one login form). Email is kept only as optional contact info.
 
 Signup is one page (templates/signup.html) with a role switcher — Course
 Owner / Teacher / Student — each posting to its own route below:
@@ -33,6 +33,14 @@ def _dashboard_for(user):
     return url_for("student.dashboard")
 
 
+def _username_taken(username):
+    """Usernames are unique across BOTH the Users and Students tables."""
+    return (
+        User.query.filter_by(username=username).first() is not None
+        or Student.query.filter_by(username=username).first() is not None
+    )
+
+
 @auth_bp.route("/", methods=["GET"])
 def index():
     """Redirect the root URL to the right dashboard, or to login."""
@@ -53,22 +61,23 @@ def signup():
 
     course_name = request.form.get("course_name", "").strip()
     name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip().lower()
+    username = request.form.get("username", "").strip().lower()
+    email = request.form.get("email", "").strip().lower() or None
     password = request.form.get("password", "")
 
-    if not all([course_name, name, email, password]):
-        flash("All fields are required.", "error")
+    if not all([course_name, name, username, password]):
+        flash("Course name, name, username, and password are all required.", "error")
         return redirect(url_for("auth.signup"))
 
-    if User.query.filter_by(email=email).first():
-        flash("An account with that email already exists. Try logging in instead.", "error")
+    if _username_taken(username):
+        flash(f'The username "{username}" is already taken. Try another.', "error")
         return redirect(url_for("auth.signup"))
 
     course = Course(name=course_name)
     db.session.add(course)
     db.session.flush()  # get course.id before creating the owner
 
-    owner = User(name=name, email=email, role=Role.ADMIN.value, course_id=course.id)
+    owner = User(name=name, username=username, email=email, role=Role.ADMIN.value, course_id=course.id)
     owner.set_password(password)
     db.session.add(owner)
     db.session.commit()
@@ -93,19 +102,20 @@ def join_teacher():
 
     course_id = request.form.get("course_id", type=int)
     name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip().lower()
+    username = request.form.get("username", "").strip().lower()
+    email = request.form.get("email", "").strip().lower() or None
     password = request.form.get("password", "")
 
     course = Course.query.get(course_id)
-    if not course or not name or not email or not password:
+    if not course or not name or not username or not password:
         flash("Pick a course and fill in every field.", "error")
         return redirect(url_for("auth.join_teacher"))
 
-    if User.query.filter_by(email=email).first():
-        flash("An account with that email already exists. Try logging in instead.", "error")
+    if _username_taken(username):
+        flash(f'The username "{username}" is already taken. Try another.', "error")
         return redirect(url_for("auth.join_teacher"))
 
-    teacher = User(name=name, email=email, role=Role.TEACHER.value, course_id=course.id)
+    teacher = User(name=name, username=username, email=email, role=Role.TEACHER.value, course_id=course.id)
     teacher.set_password(password)
     db.session.add(teacher)
     db.session.commit()
@@ -130,19 +140,20 @@ def join_student():
 
     course_id = request.form.get("course_id", type=int)
     name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip().lower()
+    username = request.form.get("username", "").strip().lower()
+    email = request.form.get("email", "").strip().lower() or None
     password = request.form.get("password", "")
 
     course = Course.query.get(course_id)
-    if not course or not name or not email or not password:
+    if not course or not name or not username or not password:
         flash("Pick a course and fill in every field.", "error")
         return redirect(url_for("auth.join_student"))
 
-    if Student.query.filter_by(email=email).first() or User.query.filter_by(email=email).first():
-        flash("An account with that email already exists. Try logging in instead.", "error")
+    if Student.query.filter_by(username=username).first() or User.query.filter_by(username=username).first():
+        flash("An account with that username already exists. Try logging in instead.", "error")
         return redirect(url_for("auth.join_student"))
 
-    student = Student(name=name, email=email, course_id=course.id)
+    student = Student(name=name, username=username, email=email, course_id=course.id)
     student.set_password(password)
     db.session.add(student)
     db.session.commit()
@@ -160,17 +171,17 @@ def login():
     if request.method == "GET":
         return render_template("login.html")
 
-    email = request.form.get("email", "").strip().lower()
+    username = request.form.get("username", "").strip().lower()
     password = request.form.get("password", "")
 
-    account = User.query.filter_by(email=email).first()
+    account = User.query.filter_by(username=username).first()
     if account is None:
-        student = Student.query.filter(Student.email.ilike(email)).first()
+        student = Student.query.filter_by(username=username).first()
         if student and student.has_login():
             account = student
 
     if account is None or not account.check_password(password):
-        flash("That email and password don't match.", "error")
+        flash("That username and password don't match.", "error")
         return redirect(url_for("auth.login"))
 
     login_user(account)

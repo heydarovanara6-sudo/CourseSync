@@ -95,6 +95,54 @@ def start_cycle(student_id):
     return redirect(url_for("teacher.student_detail", student_id=student_id))
 
 
+@teacher_bp.route("/cycles/<int:cycle_id>/resize", methods=["POST"])
+@teacher_required
+def resize_cycle(cycle_id):
+    """Change an active cycle's length between 8 and 10 lessons.
+
+    Growing (8 -> 10) just adds two new, uncompleted lesson slots. Shrinking
+    (10 -> 8) removes the top slots — but only if they haven't been stamped
+    yet, so nobody can lose recorded progress by accident.
+    """
+    new_total = request.form.get("total_lessons", type=int)
+    if new_total not in (8, 10):
+        flash("Cycle length must be 8 or 10 lessons.", "error")
+        return redirect(url_for("teacher.dashboard"))
+
+    cycle = Cycle.query.get_or_404(cycle_id)
+    if cycle.teacher_id != current_user.id:
+        flash("That's not your cycle.", "error")
+        return redirect(url_for("teacher.dashboard"))
+    if cycle.completed:
+        flash("This cycle is already closed.", "error")
+        return redirect(url_for("teacher.student_detail", student_id=cycle.student_id))
+
+    if new_total == cycle.total_lessons:
+        return redirect(url_for("teacher.student_detail", student_id=cycle.student_id))
+
+    if new_total > cycle.total_lessons:
+        for n in range(cycle.total_lessons + 1, new_total + 1):
+            db.session.add(Lesson(cycle_id=cycle.id, lesson_number=n))
+        cycle.total_lessons = new_total
+        db.session.commit()
+        flash(f"Cycle extended to {new_total} lessons.", "success")
+    else:
+        lessons_to_drop = [l for l in cycle.lessons if l.lesson_number > new_total]
+        if any(l.completed for l in lessons_to_drop):
+            flash(
+                "Can't shrink this cycle — one of the lessons past that point is already stamped.",
+                "error",
+            )
+            return redirect(url_for("teacher.student_detail", student_id=cycle.student_id))
+        for lesson in lessons_to_drop:
+            db.session.delete(lesson)
+        cycle.total_lessons = new_total
+        db.session.commit()
+        flash(f"Cycle shortened to {new_total} lessons.", "success")
+
+    return redirect(url_for("teacher.student_detail", student_id=cycle.student_id))
+
+
 @teacher_bp.route("/lessons/<int:lesson_id>/complete", methods=["POST"])
 @teacher_required
 def complete_lesson(lesson_id):

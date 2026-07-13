@@ -3,7 +3,7 @@
   <div class="stamp-row {{ 'stamp-row--sm' if size == 'sm' else '' }}">
     {% for lesson in cycle.lessons %}
       {% if lesson.completed %}
-        <div class="stamp stamp--filled" title="Lesson {{ lesson.lesson_number }} — completed">✓</div>
+        <div class="stamp stamp--filled" title="Lesson {{ lesson.lesson_number }} — completed{{ ' on ' + lesson.scheduled_date.strftime('%b %d, %Y') if lesson.scheduled_date else '' }}">✓</div>
       {% elif loop.index0 == cycle.lessons_completed %}
         <div class="stamp stamp--next" title="Lesson {{ lesson.lesson_number }} — next up">{{ lesson.lesson_number }}</div>
       {% else %}

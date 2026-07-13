@@ -98,17 +98,25 @@ def start_cycle(student_id):
 @teacher_bp.route("/lessons/<int:lesson_id>/complete", methods=["POST"])
 @teacher_required
 def complete_lesson(lesson_id):
-    """Mark a single lesson complete."""
+    """Mark a single lesson complete, with the date it actually happened."""
     lesson = Lesson.query.get_or_404(lesson_id)
     cycle = lesson.cycle
     if cycle.teacher_id != current_user.id:
         flash("That's not your cycle.", "error")
         return redirect(url_for("teacher.dashboard"))
 
+    lesson_date_str = request.form.get("lesson_date", "")
+    try:
+        lesson_date = date.fromisoformat(lesson_date_str)
+    except ValueError:
+        flash("Enter a valid date for this lesson.", "error")
+        return redirect(url_for("teacher.student_detail", student_id=cycle.student_id))
+
+    lesson.scheduled_date = lesson_date
     lesson.mark_complete()
     db.session.commit()
 
-    flash(f"Lesson {lesson.lesson_number} stamped.", "success")
+    flash(f"Lesson {lesson.lesson_number} stamped for {lesson_date.strftime('%b %d, %Y')}.", "success")
     return redirect(url_for("teacher.student_detail", student_id=cycle.student_id))
 
 

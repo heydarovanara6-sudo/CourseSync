@@ -4,10 +4,17 @@
 {% block content %}
 <a href="{{ url_for('admin.groups') }}" class="text-xs text-moss-500 hover:text-ink-900">&larr; Groups</a>
 
-<div class="mt-3 mb-8">
-  <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Group</p>
-  <h1 class="font-display text-3xl">{{ group.name }}</h1>
-  <p class="text-sm text-moss-500 mt-1">Run by {{ group.teacher.name }}</p>
+<div class="mt-3 mb-8 flex items-start justify-between gap-4">
+  <div>
+    <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Group</p>
+    <h1 class="font-display text-3xl">{{ group.name }}</h1>
+    <p class="text-sm text-moss-500 mt-1">Run by {{ group.teacher.name }}</p>
+  </div>
+  <form method="POST" action="{{ url_for('admin.delete_group', group_id=group.id) }}"
+        onsubmit="return confirm('Delete {{ group.name }}? This removes its whole attendance history too.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <button type="submit" class="btn !text-xs" style="background: var(--brick-100); color: var(--brick-500);">Delete group</button>
+  </form>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -15,18 +22,58 @@
   <!-- Roster -->
   <section>
     <h2 class="font-display text-xl mb-3">Roster</h2>
-    <div class="card divide-y divide-paper-line">
+    <div class="card divide-y divide-paper-line mb-4">
       {% for student in group.students %}
         <a href="{{ url_for('admin.student_detail', student_id=student.id) }}" class="px-4 py-3 text-sm hover:underline block">{{ student.name }}</a>
       {% else %}
         <p class="px-4 py-6 text-sm text-moss-500">No students in this group yet.</p>
       {% endfor %}
     </div>
+
+    {% if unassigned_students %}
+      <details class="card p-4">
+        <summary class="text-sm font-semibold cursor-pointer select-none">+ Add a student to this group</summary>
+        <form method="POST" action="{{ url_for('admin.add_to_group', group_id=group.id) }}" class="mt-4 flex gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <select name="student_id" class="input">
+            {% for student in unassigned_students %}
+              <option value="{{ student.id }}">{{ student.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-dark shrink-0">Add</button>
+        </form>
+      </details>
+    {% endif %}
   </section>
 
-  <!-- Attendance history -->
+  <!-- Attendance -->
   <section>
-    <h2 class="font-display text-xl mb-3">Attendance history</h2>
+    <h2 class="font-display text-xl mb-3">Take attendance</h2>
+    {% if group.students %}
+      <form method="POST" action="{{ url_for('admin.add_session', group_id=group.id) }}" class="card p-5 space-y-4 mb-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Date</label>
+          <input class="input" type="date" name="session_date" value="{{ today }}" required />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Topic (optional)</label>
+          <input class="input" type="text" name="topic" placeholder="What did the group cover?" />
+        </div>
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Present</p>
+          {% for student in group.students %}
+            <label class="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="present_{{ student.id }}" checked class="accent-brass-500" />
+              {{ student.name }}
+            </label>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary w-full">Log session</button>
+      </form>
+    {% endif %}
+
+    <h3 class="font-display text-lg mb-2">Past sessions</h3>
     <div class="space-y-2">
       {% for session in sessions %}
         <div class="card p-4">

@@ -12,12 +12,15 @@ Note: Admins (course owners) can also act as a teacher themselves — so
 """
 
 from functools import wraps
+from datetime import date, time
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
 from app import db
-from app.models import User, Student, Role, Cycle, Attendance, Homework, TimetableEntry, Group
+from app.models import (
+    User, Student, Role, Cycle, Attendance, Homework, TimetableEntry, Group, GroupSession,
+)
 from app.routes.auth import _username_taken
 
 admin_bp = Blueprint("admin", __name__)
@@ -354,7 +357,7 @@ def assign_student(student_id):
 
 
 # ---------------------------------------------------------------------------
-# Timetable — admin sees every teacher's timetable in their course (read-only)
+# Timetable — admin can view AND manage every teacher's timetable
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/timetable")
@@ -371,11 +374,83 @@ def timetable():
     for entry in entries:
         by_teacher.setdefault(entry.teacher, []).append(entry)
 
-    return render_template("admin/timetable.html", by_teacher=by_teacher)
+    teachers = _assignable_teachers()
+    return render_template("admin/timetable.html", by_teacher=by_teacher, teachers=teachers)
+
+
+@admin_bp.route("/teachers/<int:teacher_id>/timetable", methods=["POST"])
+@admin_required
+def add_timetable_entry(teacher_id):
+    """Add a timetable slot on behalf of any teacher in this course."""
+    teacher = User.query.filter_by(id=teacher_id, course_id=current_user.course_id).first_or_404()
+
+    day_of_week = request.form.get("day_of_week", type=int)
+    start_str = request.form.get("start_time", "")
+    end_str = request.form.get("end_time", "")
+    target_type = request.form.get("target_type", "custom")
+    title = request.form.get("title", "").strip() or None
+
+    if day_of_week is None or not (0 <= day_of_week <= 6):
+        flash("Pick a valid day of the week.", "error")
+        return redirect(url_for("admin.timetable"))
+
+    try:
+        start_time = time.fromisoformat(start_str)
+        end_time = time.fromisoformat(end_str)
+    except ValueError:
+        flash("Enter a valid start and end time.", "error")
+        return redirect(url_for("admin.timetable"))
+
+    if end_time <= start_time:
+        flash("End time must be after start time.", "error")
+        return redirect(url_for("admin.timetable"))
+
+    student_id = None
+    group_id = None
+
+    if target_type == "student":
+        student_id = request.form.get("student_id", type=int)
+        student = Student.query.get_or_404(student_id)
+        if teacher not in student.teachers:
+            flash("That student isn't assigned to this teacher.", "error")
+            return redirect(url_for("admin.timetable"))
+    elif target_type == "group":
+        group_id = request.form.get("group_id", type=int)
+        Group.query.filter_by(id=group_id, teacher_id=teacher.id).first_or_404()
+    elif not title:
+        flash("Give this slot a label, or pick a student/group.", "error")
+        return redirect(url_for("admin.timetable"))
+
+    db.session.add(TimetableEntry(
+        teacher_id=teacher.id,
+        student_id=student_id,
+        group_id=group_id,
+        day_of_week=day_of_week,
+        start_time=start_time,
+        end_time=end_time,
+        title=title,
+    ))
+    db.session.commit()
+    flash(f"Added to {teacher.name}'s timetable.", "success")
+    return redirect(url_for("admin.timetable"))
+
+
+@admin_bp.route("/timetable/<int:entry_id>/delete", methods=["POST"])
+@admin_required
+def delete_timetable_entry(entry_id):
+    entry = (
+        TimetableEntry.query.join(User, TimetableEntry.teacher_id == User.id)
+        .filter(TimetableEntry.id == entry_id, User.course_id == current_user.course_id)
+        .first_or_404()
+    )
+    db.session.delete(entry)
+    db.session.commit()
+    flash("Removed from the timetable.", "success")
+    return redirect(url_for("admin.timetable"))
 
 
 # ---------------------------------------------------------------------------
-# Homework — admin sees every assignment in the course (read-only)
+# Homework — admin can view AND assign/grade homework for any teacher/student
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/homework")
@@ -387,11 +462,95 @@ def homework():
         .order_by(Homework.created_at.desc())
         .all()
     )
-    return render_template("admin/homework.html", assignments=assignments)
+    teachers = _assignable_teachers()
+    students = Student.query.filter_by(course_id=current_user.course_id).order_by(Student.name).all()
+    return render_template("admin/homework.html", assignments=assignments, teachers=teachers, students=students)
+
+
+@admin_bp.route("/homework", methods=["POST"], endpoint="add_homework")
+@admin_required
+def add_homework():
+    teacher_id = request.form.get("teacher_id", type=int)
+    student_id = request.form.get("student_id", type=int)
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip() or None
+    due_date_str = request.form.get("due_date")
+
+    teacher = User.query.filter_by(id=teacher_id, course_id=current_user.course_id).first_or_404()
+    student = Student.query.filter_by(id=student_id, course_id=current_user.course_id).first_or_404()
+
+    if teacher not in student.teachers:
+        flash("That student isn't assigned to that teacher.", "error")
+        return redirect(url_for("admin.homework"))
+
+    if not title:
+        flash("Give the assignment a title.", "error")
+        return redirect(url_for("admin.homework"))
+
+    due_date = None
+    if due_date_str:
+        try:
+            due_date = date.fromisoformat(due_date_str)
+        except ValueError:
+            due_date = None
+
+    db.session.add(Homework(
+        teacher_id=teacher.id, student_id=student.id, title=title,
+        description=description, due_date=due_date,
+    ))
+    db.session.commit()
+    flash(f'"{title}" assigned to {student.name}.', "success")
+    return redirect(url_for("admin.homework"))
+
+
+@admin_bp.route("/homework/<int:homework_id>")
+@admin_required
+def homework_detail(homework_id):
+    hw = (
+        Homework.query.join(Student, Homework.student_id == Student.id)
+        .filter(Homework.id == homework_id, Student.course_id == current_user.course_id)
+        .first_or_404()
+    )
+    return render_template("admin/homework_detail.html", homework=hw)
+
+
+@admin_bp.route("/homework/<int:homework_id>/grade", methods=["POST"])
+@admin_required
+def grade_homework(homework_id):
+    hw = (
+        Homework.query.join(Student, Homework.student_id == Student.id)
+        .filter(Homework.id == homework_id, Student.course_id == current_user.course_id)
+        .first_or_404()
+    )
+    if hw.submission is None:
+        flash("This student hasn't submitted anything yet.", "error")
+        return redirect(url_for("admin.homework_detail", homework_id=hw.id))
+
+    from datetime import datetime as _dt
+    hw.submission.teacher_feedback = request.form.get("teacher_feedback", "").strip() or None
+    hw.submission.grade = request.form.get("grade", "").strip() or None
+    hw.submission.graded_at = _dt.utcnow()
+    db.session.commit()
+    flash("Feedback saved.", "success")
+    return redirect(url_for("admin.homework_detail", homework_id=hw.id))
+
+
+@admin_bp.route("/homework/<int:homework_id>/delete", methods=["POST"])
+@admin_required
+def delete_homework(homework_id):
+    hw = (
+        Homework.query.join(Student, Homework.student_id == Student.id)
+        .filter(Homework.id == homework_id, Student.course_id == current_user.course_id)
+        .first_or_404()
+    )
+    db.session.delete(hw)
+    db.session.commit()
+    flash("Assignment deleted.", "success")
+    return redirect(url_for("admin.homework"))
 
 
 # ---------------------------------------------------------------------------
-# Groups — admin sees every group in the course (read-only)
+# Groups — admin can view AND manage every group in the course
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/groups")
@@ -403,7 +562,26 @@ def groups():
         .order_by(Group.name)
         .all()
     )
-    return render_template("admin/groups.html", groups=course_groups)
+    teachers = _assignable_teachers()
+    return render_template("admin/groups.html", groups=course_groups, teachers=teachers)
+
+
+@admin_bp.route("/groups", methods=["POST"], endpoint="add_group")
+@admin_required
+def add_group():
+    teacher_id = request.form.get("teacher_id", type=int)
+    name = request.form.get("name", "").strip()
+
+    teacher = User.query.filter_by(id=teacher_id, course_id=current_user.course_id).first_or_404()
+
+    if not name:
+        flash("Give the group a name.", "error")
+        return redirect(url_for("admin.groups"))
+
+    db.session.add(Group(name=name, teacher_id=teacher.id))
+    db.session.commit()
+    flash(f'"{name}" was created for {teacher.name}.', "success")
+    return redirect(url_for("admin.groups"))
 
 
 @admin_bp.route("/groups/<int:group_id>")
@@ -414,5 +592,79 @@ def group_detail(group_id):
         .filter(Group.id == group_id, User.course_id == current_user.course_id)
         .first_or_404()
     )
+    unassigned_students = [s for s in group.teacher.students if group not in s.groups]
     sessions = sorted(group.sessions, key=lambda s: s.session_date, reverse=True)
-    return render_template("admin/group_detail.html", group=group, sessions=sessions)
+    return render_template(
+        "admin/group_detail.html",
+        group=group,
+        unassigned_students=unassigned_students,
+        sessions=sessions,
+        today=date.today().isoformat(),
+    )
+
+
+@admin_bp.route("/groups/<int:group_id>/students", methods=["POST"])
+@admin_required
+def add_to_group(group_id):
+    group = (
+        Group.query.join(User, Group.teacher_id == User.id)
+        .filter(Group.id == group_id, User.course_id == current_user.course_id)
+        .first_or_404()
+    )
+    student_id = request.form.get("student_id", type=int)
+    student = Student.query.filter_by(id=student_id, course_id=current_user.course_id).first_or_404()
+
+    if group.teacher not in student.teachers:
+        flash("That student isn't assigned to this group's teacher.", "error")
+        return redirect(url_for("admin.group_detail", group_id=group.id))
+
+    if group not in student.groups:
+        student.groups.append(group)
+        db.session.commit()
+        flash(f"{student.name} added to {group.name}.", "success")
+    return redirect(url_for("admin.group_detail", group_id=group.id))
+
+
+@admin_bp.route("/groups/<int:group_id>/sessions", methods=["POST"])
+@admin_required
+def add_session(group_id):
+    group = (
+        Group.query.join(User, Group.teacher_id == User.id)
+        .filter(Group.id == group_id, User.course_id == current_user.course_id)
+        .first_or_404()
+    )
+
+    session_date_str = request.form.get("session_date")
+    try:
+        session_date = date.fromisoformat(session_date_str) if session_date_str else date.today()
+    except ValueError:
+        session_date = date.today()
+
+    topic = request.form.get("topic", "").strip() or None
+
+    group_session = GroupSession(group_id=group.id, session_date=session_date, topic=topic)
+    db.session.add(group_session)
+    db.session.flush()
+
+    for student in group.students:
+        present = request.form.get(f"present_{student.id}") is not None
+        db.session.add(Attendance(session_id=group_session.id, student_id=student.id, present=present))
+
+    db.session.commit()
+    flash("Attendance logged.", "success")
+    return redirect(url_for("admin.group_detail", group_id=group.id))
+
+
+@admin_bp.route("/groups/<int:group_id>/delete", methods=["POST"])
+@admin_required
+def delete_group(group_id):
+    group = (
+        Group.query.join(User, Group.teacher_id == User.id)
+        .filter(Group.id == group_id, User.course_id == current_user.course_id)
+        .first_or_404()
+    )
+    name = group.name
+    db.session.delete(group)
+    db.session.commit()
+    flash(f'"{name}" was deleted.', "success")
+    return redirect(url_for("admin.groups"))

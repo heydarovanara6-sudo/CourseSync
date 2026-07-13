@@ -5,10 +5,10 @@
 <div class="mb-8">
   <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Admin</p>
   <h1 class="font-display text-3xl">Groups</h1>
-  <p class="text-sm text-moss-500 mt-1">Every group across the whole course.</p>
+  <p class="text-sm text-moss-500 mt-1">Every group across the whole course — create and manage on any teacher's behalf.</p>
 </div>
 
-<div class="space-y-3">
+<div class="space-y-3 mb-8">
   {% for group in groups %}
     <a href="{{ url_for('admin.group_detail', group_id=group.id) }}" class="card p-5 flex items-center justify-between hover:border-brass-500 transition-colors block">
       <div>
@@ -23,4 +23,19 @@
     <div class="card p-8 text-center text-moss-500 text-sm">No groups yet.</div>
   {% endfor %}
 </div>
+
+<details class="card p-4">
+  <summary class="text-sm font-semibold cursor-pointer select-none">+ Create a group</summary>
+  <form method="POST" action="{{ url_for('admin.add_group') }}" class="mt-4 space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <select name="teacher_id" class="input" required>
+      <option value="" disabled selected>For teacher&hellip;</option>
+      {% for teacher in teachers %}
+        <option value="{{ teacher.id }}">{{ teacher.name }}</option>
+      {% endfor %}
+    </select>
+    <input class="input" type="text" name="name" placeholder="Group name (e.g. Saturday Beginners)" required />
+    <button type="submit" class="btn btn-dark w-full">Create group</button>
+  </form>
+</details>
 {% endblock %}

@@ -5,27 +5,82 @@
 <div class="mb-8">
   <p class="font-mono text-xs uppercase tracking-widest text-brass-600 mb-1">Admin</p>
   <h1 class="font-display text-3xl">Everyone's timetable</h1>
-  <p class="text-sm text-moss-500 mt-1">Read-only — each teacher manages their own from their Timetable page.</p>
+  <p class="text-sm text-moss-500 mt-1">You can add or remove slots for any teacher here.</p>
 </div>
 
 <div class="space-y-8">
-  {% for teacher, entries in by_teacher.items() %}
+  {% for teacher in teachers %}
+    {% set entries = by_teacher.get(teacher, []) %}
     <section>
       <h2 class="font-display text-xl mb-3">{{ teacher.name }}</h2>
-      <div class="card divide-y divide-paper-line">
+      <div class="card divide-y divide-paper-line mb-3">
         {% for entry in entries %}
           <div class="px-4 py-3 flex items-center justify-between gap-3">
             <div>
               <p class="text-sm font-medium">{{ entry.label() }}</p>
               <p class="text-xs text-moss-500">{{ entry.day_name() }}</p>
             </div>
-            <span class="font-mono text-xs text-moss-500">{{ entry.start_time.strftime('%H:%M') }}&ndash;{{ entry.end_time.strftime('%H:%M') }}</span>
+            <div class="flex items-center gap-3">
+              <span class="font-mono text-xs text-moss-500">{{ entry.start_time.strftime('%H:%M') }}&ndash;{{ entry.end_time.strftime('%H:%M') }}</span>
+              <form method="POST" action="{{ url_for('admin.delete_timetable_entry', entry_id=entry.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-ghost !text-xs !py-1">Remove</button>
+              </form>
+            </div>
           </div>
+        {% else %}
+          <p class="px-4 py-6 text-sm text-moss-500">Nothing scheduled yet.</p>
         {% endfor %}
       </div>
+
+      <details class="card p-4">
+        <summary class="text-sm font-semibold cursor-pointer select-none">+ Add a slot for {{ teacher.name.split(' ')[0] }}</summary>
+        <form method="POST" action="{{ url_for('admin.add_timetable_entry', teacher_id=teacher.id) }}" class="mt-4 space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="grid grid-cols-3 gap-3">
+            <select name="day_of_week" class="input" required>
+              {% for i in range(7) %}
+                <option value="{{ i }}">{{ ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][i] }}</option>
+              {% endfor %}
+            </select>
+            <input class="input" type="time" name="start_time" required />
+            <input class="input" type="time" name="end_time" required />
+          </div>
+
+          <select name="target_type" class="input" onchange="
+            this.closest('form').querySelector('[data-picker=student]').classList.toggle('hidden', this.value !== 'student');
+            this.closest('form').querySelector('[data-picker=group]').classList.toggle('hidden', this.value !== 'group');
+            this.closest('form').querySelector('[data-picker=title]').classList.toggle('hidden', this.value !== 'custom');
+          ">
+            <option value="student">A student</option>
+            <option value="group">A group</option>
+            <option value="custom">Something else</option>
+          </select>
+
+          <div data-picker="student">
+            <select name="student_id" class="input">
+              {% for student in teacher.students %}
+                <option value="{{ student.id }}">{{ student.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div data-picker="group" class="hidden">
+            <select name="group_id" class="input">
+              {% for group in teacher.groups %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div data-picker="title" class="hidden">
+            <input class="input" type="text" name="title" placeholder="Label (e.g. Prep time)" />
+          </div>
+
+          <button type="submit" class="btn btn-dark w-full">Add to {{ teacher.name.split(' ')[0] }}'s timetable</button>
+        </form>
+      </details>
     </section>
   {% else %}
-    <div class="card p-8 text-center text-moss-500 text-sm">No timetable entries yet.</div>
+    <div class="card p-8 text-center text-moss-500 text-sm">No teachers yet.</div>
   {% endfor %}
 </div>
 {% endblock %}

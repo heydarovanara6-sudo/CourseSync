@@ -149,8 +149,8 @@ def join_student():
         flash("Pick a course and fill in every field.", "error")
         return redirect(url_for("auth.join_student"))
 
-    if Student.query.filter_by(username=username).first() or User.query.filter_by(username=username).first():
-        flash("An account with that username already exists. Try logging in instead.", "error")
+    if _username_taken(username):
+        flash(f'The username "{username}" is already taken. Try another.', "error")
         return redirect(url_for("auth.join_student"))
 
     student = Student(name=name, username=username, email=email, course_id=course.id)
@@ -186,6 +186,35 @@ def login():
 
     login_user(account)
     return redirect(_dashboard_for(account))
+
+
+@auth_bp.route("/account/password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    """Works for any logged-in account — Superadmin, Admin, Teacher, or Student."""
+    if request.method == "GET":
+        return render_template("change_password.html")
+
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+    confirm_password = request.form.get("confirm_password", "")
+
+    if not current_user.check_password(current_password):
+        flash("Your current password is incorrect.", "error")
+        return redirect(url_for("auth.change_password"))
+
+    if len(new_password) < 6:
+        flash("New password must be at least 6 characters.", "error")
+        return redirect(url_for("auth.change_password"))
+
+    if new_password != confirm_password:
+        flash("New password and confirmation don't match.", "error")
+        return redirect(url_for("auth.change_password"))
+
+    current_user.set_password(new_password)
+    db.session.commit()
+    flash("Your password has been changed.", "success")
+    return redirect(_dashboard_for(current_user))
 
 
 @auth_bp.route("/logout")

@@ -17,7 +17,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
 from app import db
-from app.models import User, Student, Role, Cycle, Attendance, Homework, TimetableEntry
+from app.models import User, Student, Role, Cycle, Attendance, Homework, TimetableEntry, Group
 from app.routes.auth import _username_taken
 
 admin_bp = Blueprint("admin", __name__)
@@ -47,16 +47,23 @@ def _assignable_teachers():
 def dashboard():
     teachers = _assignable_teachers()
     students = Student.query.filter_by(course_id=current_user.course_id).order_by(Student.name).all()
-    active_cycles = (
+
+    # Every in-progress lesson cycle in the course, across every teacher —
+    # so the admin can see everyone's 8/10-lesson progress at a glance
+    # without clicking into each teacher individually.
+    active_cycle_list = (
         Cycle.query.join(Student)
         .filter(Student.course_id == current_user.course_id, Cycle.completed.is_(False))
-        .count()
+        .order_by(Cycle.started_on.desc())
+        .all()
     )
+
     return render_template(
         "admin/dashboard.html",
         teachers=teachers,
         students=students,
-        active_cycles=active_cycles,
+        active_cycles=len(active_cycle_list),
+        active_cycle_list=active_cycle_list,
     )
 
 
@@ -365,3 +372,47 @@ def timetable():
         by_teacher.setdefault(entry.teacher, []).append(entry)
 
     return render_template("admin/timetable.html", by_teacher=by_teacher)
+
+
+# ---------------------------------------------------------------------------
+# Homework — admin sees every assignment in the course (read-only)
+# ---------------------------------------------------------------------------
+
+@admin_bp.route("/homework")
+@admin_required
+def homework():
+    assignments = (
+        Homework.query.join(Student, Homework.student_id == Student.id)
+        .filter(Student.course_id == current_user.course_id)
+        .order_by(Homework.created_at.desc())
+        .all()
+    )
+    return render_template("admin/homework.html", assignments=assignments)
+
+
+# ---------------------------------------------------------------------------
+# Groups — admin sees every group in the course (read-only)
+# ---------------------------------------------------------------------------
+
+@admin_bp.route("/groups")
+@admin_required
+def groups():
+    course_groups = (
+        Group.query.join(User, Group.teacher_id == User.id)
+        .filter(User.course_id == current_user.course_id)
+        .order_by(Group.name)
+        .all()
+    )
+    return render_template("admin/groups.html", groups=course_groups)
+
+
+@admin_bp.route("/groups/<int:group_id>")
+@admin_required
+def group_detail(group_id):
+    group = (
+        Group.query.join(User, Group.teacher_id == User.id)
+        .filter(Group.id == group_id, User.course_id == current_user.course_id)
+        .first_or_404()
+    )
+    sessions = sorted(group.sessions, key=lambda s: s.session_date, reverse=True)
+    return render_template("admin/group_detail.html", group=group, sessions=sessions)

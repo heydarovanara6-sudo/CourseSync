@@ -59,6 +59,15 @@
           <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link {{ 'is-active' if request.endpoint == 'admin.dashboard' }}">
             <span>&#9670;</span> Overview
           </a>
+          <a href="{{ url_for('admin.homework') }}" class="sidebar-link {{ 'is-active' if request.endpoint == 'admin.homework' }}">
+            <span>&#9636;</span> All homework
+          </a>
+          <a href="{{ url_for('admin.groups') }}" class="sidebar-link {{ 'is-active' if request.endpoint in ['admin.groups', 'admin.group_detail'] }}">
+            <span>&#9678;</span> All groups
+          </a>
+          <a href="{{ url_for('admin.timetable') }}" class="sidebar-link {{ 'is-active' if request.endpoint == 'admin.timetable' }}">
+            <span>&#128337;</span> All timetables
+          </a>
         {% endif %}
 
         {% if current_user.is_admin() or current_user.is_teacher() %}
@@ -92,6 +101,7 @@
       <p class="text-xs text-moss-300 truncate mb-3">
         {{ 'Superadmin' if current_user.is_superadmin() else ('Admin' if current_user.is_admin() else ('Teacher' if current_user.is_teacher() else 'Student')) }}
       </p>
+      <a href="{{ url_for('auth.change_password') }}" class="sidebar-link !px-0 !py-1 text-xs mb-1">Change password</a>
       <a href="{{ url_for('auth.logout') }}" class="sidebar-link !px-0 !py-1 text-xs">&larr; Log out</a>
     </div>
   </aside>

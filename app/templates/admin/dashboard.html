@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import stamp_card %}
 {% block title %}Overview — CourseSync{% endblock %}
 
 {% block content %}
@@ -22,6 +23,29 @@
     <p class="text-sm text-moss-500 mt-1">Active cycles</p>
   </div>
 </div>
+
+<!-- Lesson progress across every teacher -->
+<section class="mb-10">
+  <h2 class="font-display text-xl mb-3">Lesson progress</h2>
+  <div class="space-y-3">
+    {% for cycle in active_cycle_list %}
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <span class="text-sm font-medium">{{ cycle.student.name }}</span>
+            <span class="text-xs text-moss-500"> with {{ cycle.teacher.name }}</span>
+          </div>
+          <span class="badge {{ 'badge-brass' if cycle.is_ready_to_complete() else 'badge-moss' }} font-mono">
+            {{ cycle.lessons_completed }} / {{ cycle.total_lessons }}
+          </span>
+        </div>
+        {{ stamp_card(cycle, size='sm') }}
+      </div>
+    {% else %}
+      <div class="card p-8 text-center text-moss-500 text-sm">No cycles in progress right now.</div>
+    {% endfor %}
+  </div>
+</section>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 

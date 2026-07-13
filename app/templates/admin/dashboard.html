@@ -105,6 +105,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input class="input" type="text" name="name" placeholder="Full name" required />
         <input class="input" type="text" name="username" placeholder="Username (optional — needed for the student to log in)" autocapitalize="off" autocorrect="off" />
+        <input class="input" type="password" name="password" placeholder="Password (optional — only used if a username is set)" />
         <input class="input" type="email" name="email" placeholder="Email (optional)" />
         <div>
           <p class="text-xs font-semibold uppercase tracking-wide text-ink-700 mb-1.5">Assign to teacher(s)</p>
